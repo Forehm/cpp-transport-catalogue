@@ -9,7 +9,7 @@
 
 namespace Catalogue
 {
-	
+
 	RequestQueue::BusRequestsQueueManager bus_manager;
 	RequestQueue::StopRequestsQueueManager stop_manager;
 
@@ -97,6 +97,7 @@ namespace Catalogue
 		{
 			RequestQueue::CheckBusRequestQueue(cataloque);
 			RequestQueue::CheckStopRequestQueue(cataloque);
+			cataloque.SetBusDistancesArchive();
 		}
 
 		void CheckStopRequestQueue(TransportCatalogue& catalogue)
@@ -131,6 +132,59 @@ namespace Catalogue
 				}
 			}
 			bus_manager.Clear();
+		}
+
+		void BusRequestsQueueManager::AddBusRequest(std::vector<std::string> request)
+		{
+			bus_request_queue_.push_back(std::move(request));
+		}
+
+		size_t BusRequestsQueueManager::GetBusRequestQueueSize()
+		{
+			return bus_request_queue_.size();
+		}
+
+		std::vector<std::vector<std::string>>::iterator BusRequestsQueueManager::begin()
+		{
+			return bus_request_queue_.begin();
+		}
+
+		std::vector<std::vector<std::string>>::iterator BusRequestsQueueManager::end()
+		{
+			return bus_request_queue_.end();
+		}
+
+		void BusRequestsQueueManager::Clear()
+		{
+			bus_request_queue_.clear();
+		}
+
+		void StopRequestsQueueManager::AddStopRequest(const std::string& stop_name, const std::vector<std::pair<std::string, size_t>>& distances)
+		{
+			for (const auto& [other_stop, dist] : distances)
+			{
+				stop_request_queue_.insert({ stop_name,{other_stop, dist} });
+			}
+		}
+
+		size_t StopRequestsQueueManager::GetStopRequestQueueSize()
+		{
+			return stop_request_queue_.size();
+		}
+
+		std::map<std::string, std::pair<std::string, size_t>>::iterator StopRequestsQueueManager::begin()
+		{
+			return stop_request_queue_.begin();
+		}
+
+		std::map<std::string, std::pair<std::string, size_t>>::iterator StopRequestsQueueManager::end()
+		{
+			return stop_request_queue_.end();
+		}
+
+		void StopRequestsQueueManager::Clear()
+		{
+			stop_request_queue_.clear();
 		}
 	}
 

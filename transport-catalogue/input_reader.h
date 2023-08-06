@@ -24,30 +24,15 @@ namespace Catalogue
 		class BusRequestsQueueManager
 		{
 		public:
-			void AddBusRequest(std::vector<std::string> request)
-			{
-				bus_request_queue_.push_back(std::move(request));
-			}
+			void AddBusRequest(std::vector<std::string> request);
 
-			size_t GetBusRequestQueueSize()
-			{
-				return bus_request_queue_.size();
-			}
+			size_t GetBusRequestQueueSize();
 
-			std::vector<std::vector<std::string>>::iterator begin()
-			{
-				return bus_request_queue_.begin();
-			}
+			std::vector<std::vector<std::string>>::iterator begin();
 
-			std::vector<std::vector<std::string>>::iterator end()
-			{
-				return bus_request_queue_.end();
-			}
+			std::vector<std::vector<std::string>>::iterator end();
 
-			void Clear()
-			{
-				bus_request_queue_.clear();
-			}
+			void Clear();
 
 		private:
 			std::vector<std::vector<std::string>> bus_request_queue_;
@@ -57,33 +42,15 @@ namespace Catalogue
 		{
 		public:
 
-			void AddStopRequest(const std::string& stop_name, const std::vector<std::pair<std::string, size_t>>& distances)
-			{
-				for (const auto& [other_stop, dist] : distances)
-				{
-					stop_request_queue_.insert({ stop_name,{other_stop, dist} });
-				}
-			}
+			void AddStopRequest(const std::string& stop_name, const std::vector<std::pair<std::string, size_t>>& distances);
 
-			size_t GetStopRequestQueueSize()
-			{
-				return stop_request_queue_.size();
-			}
+			size_t GetStopRequestQueueSize();
 
-			std::map<std::string, std::pair<std::string, size_t>>::iterator begin()
-			{
-				return stop_request_queue_.begin();
-			}
+			std::map<std::string, std::pair<std::string, size_t>>::iterator begin();
 
-			std::map<std::string, std::pair<std::string, size_t>>::iterator end()
-			{
-				return stop_request_queue_.end();
-			}
+			std::map<std::string, std::pair<std::string, size_t>>::iterator end();
 
-			void Clear()
-			{
-				stop_request_queue_.clear();
-			}
+			void Clear();
 
 		private:
 			std::multimap<std::string, std::pair<std::string, size_t>> stop_request_queue_;

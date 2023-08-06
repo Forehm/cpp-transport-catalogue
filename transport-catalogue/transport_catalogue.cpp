@@ -50,29 +50,7 @@ namespace Catalogue
 			std::cout << "Bus " << bus_name << ": not found" << std::endl;
 			return;
 		}
-		double route_length = 0;
-		double route_length_real = 0;
-		for (size_t i = 1; i < route_indexes_.at(bus_name).size(); ++i)
-		{
-			route_length += ComputeDistance(route_indexes_.at(bus_name)[i]->coordinates, route_indexes_.at(bus_name)[i - 1]->coordinates);
-		}
-
-		for (auto begin = route_indexes_.at(bus_name).begin() + 1; begin != route_indexes_.at(bus_name).end(); ++begin)
-		{
-			if (distance_between_stops_.count({ *(begin - 1) , *begin }))
-			{
-				route_length_real += distance_between_stops_.at({ *(begin - 1) , *begin });
-			}
-			else if (distance_between_stops_.count({ *begin, *(begin - 1) }))
-			{
-				route_length_real += distance_between_stops_.at({ *begin, *(begin - 1) });
-			}
-			else
-			{
-				route_length_real += ComputeDistance((*begin - 1)->coordinates, (*begin)->coordinates);
-			}
-		}
-		double curvature = route_length_real / route_length;
+		
 		std::cout << "Bus " << bus_name << ": " << route_indexes_.at(bus_name).size() << " stops on route, ";
 
 		std::set<BusStop*> unique_stops;
@@ -82,9 +60,9 @@ namespace Catalogue
 		}
 
 		std::cout << unique_stops.size() << " unique stops, ";
-		std::cout << std::setprecision(6) << route_length_real << " route length, ";
-		std::cout << curvature << " curvature" << std::endl;
-
+		std::cout << std::setprecision(6) << bus_route_distances_.at(bus_name).first << " route length, ";
+		std::cout << bus_route_distances_.at(bus_name).second << " curvature" << std::endl;
+		
 	}
 
 	void TransportCatalogue::GetStopInfo(const std::string_view stop_name) const
@@ -105,6 +83,7 @@ namespace Catalogue
 			std::cout << ' ' << bus;
 		}
 		std::cout << std::endl;
+		
 	}
 
 	void TransportCatalogue::SetStopsDistances(const std::string_view stop_name, const std::pair<std::string, size_t>& distances)
@@ -129,6 +108,37 @@ namespace Catalogue
 			distance_between_stops_[{&(*it_other_stop_name), & (*it_stop_name)}] = distances.second;
 		}
 
+	}
+
+	void TransportCatalogue::SetBusDistancesArchive()
+	{
+
+		for (const std::string& bus_name : all_buses_)
+		{
+			double route_length = 0;
+			double route_length_real = 0;
+			for (size_t i = 1; i < route_indexes_.at(bus_name).size(); ++i)
+			{
+				route_length += ComputeDistance(route_indexes_.at(bus_name)[i]->coordinates, route_indexes_.at(bus_name)[i - 1]->coordinates);
+			}
+
+			for (auto begin = route_indexes_.at(bus_name).begin() + 1; begin != route_indexes_.at(bus_name).end(); ++begin)
+			{
+				if (distance_between_stops_.count({ *(begin - 1) , *begin }))
+				{
+					route_length_real += distance_between_stops_.at({ *(begin - 1) , *begin });
+				}
+				else if (distance_between_stops_.count({ *begin, *(begin - 1) }))
+				{
+					route_length_real += distance_between_stops_.at({ *begin, *(begin - 1) });
+				}
+				else
+				{
+					route_length_real += ComputeDistance((*begin - 1)->coordinates, (*begin)->coordinates);
+				}
+			}
+			bus_route_distances_[bus_name] = {route_length_real, route_length_real / route_length} ;
+		}
 	}
 
 }

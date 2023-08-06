@@ -1,11 +1,12 @@
 #pragma once
-#include "geo.h"
 #include <string>
 #include <deque>
 #include <unordered_map>
 #include <vector>
 #include <cmath>
 #include <set>
+#include "geo.h"
+
 
 
 namespace Catalogue
@@ -57,6 +58,7 @@ namespace Catalogue
 		void GetBusInfo(const std::string_view bus_name) const;
 		void GetStopInfo(const std::string_view stop_name) const;
 		void SetStopsDistances(const std::string_view stop_name, const std::pair<std::string, size_t>& distances);
+		void SetBusDistancesArchive();
 
 	private:
 		std::deque<BusStop> stops_;
@@ -65,6 +67,7 @@ namespace Catalogue
 		std::unordered_map<std::string_view, std::vector<BusStop*>> route_indexes_;
 		std::unordered_map<std::string_view, std::set<std::string_view>> buses_to_stops_;
 		std::unordered_map<std::pair<const BusStop*, const BusStop*>, size_t, StopsHasher> distance_between_stops_;
+		std::unordered_map<std::string_view, std::pair<double, double>> bus_route_distances_;
 	};
 
 }
