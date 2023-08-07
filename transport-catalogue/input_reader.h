@@ -64,7 +64,6 @@ namespace Catalogue
 
 		std::vector<std::pair<std::string, size_t>> StopQueryDelimiter(const std::string& text);
 
-		void ParseRequestQuery(const TransportCatalogue& catalogue, const std::string& query);
 	}
 
 }

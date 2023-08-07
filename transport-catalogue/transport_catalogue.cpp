@@ -1,6 +1,7 @@
 #include <iostream>
 #include <iomanip>
 #include <algorithm>
+#include <string>
 #include "transport_catalogue.h"
 #include "geo.h"
 
@@ -8,7 +9,7 @@
 
 namespace Catalogue
 {
-
+	using namespace std::literals::string_literals;
 
 	void TransportCatalogue::AddStop(const std::string& name, const Coordinates& coordinates)
 	{
@@ -43,15 +44,15 @@ namespace Catalogue
 		return it != all_buses_.end();
 	}
 
-	void TransportCatalogue::GetBusInfo(const std::string_view bus_name) const
+	void TransportCatalogue::GetBusInfo(std::ostream& out, const std::string_view bus_name) const
 	{
 		if (!FindBus(bus_name))
 		{
-			std::cout << "Bus " << bus_name << ": not found" << std::endl;
+			out << "Bus "s << bus_name << ": not found"s << std::endl;
 			return;
 		}
 		
-		std::cout << "Bus " << bus_name << ": " << route_indexes_.at(bus_name).size() << " stops on route, ";
+		out << "Bus " << bus_name << ": " << route_indexes_.at(bus_name).size() << " stops on route, ";
 
 		std::set<BusStop*> unique_stops;
 		for (const auto& stop : route_indexes_.at(bus_name))
@@ -59,30 +60,30 @@ namespace Catalogue
 			unique_stops.insert(stop);
 		}
 
-		std::cout << unique_stops.size() << " unique stops, ";
-		std::cout << std::setprecision(6) << bus_route_distances_.at(bus_name).first << " route length, ";
-		std::cout << bus_route_distances_.at(bus_name).second << " curvature" << std::endl;
+		out << unique_stops.size() << " unique stops, ";
+		out << std::setprecision(6) << bus_route_distances_.at(bus_name).first << " route length, ";
+		out << bus_route_distances_.at(bus_name).second << " curvature" << std::endl;
 		
 	}
 
-	void TransportCatalogue::GetStopInfo(const std::string_view stop_name) const
+	void TransportCatalogue::GetStopInfo(std::ostream& out, const std::string_view stop_name) const
 	{
 		if (!buses_to_stops_.count(stop_name))
 		{
-			std::cout << "Stop " << stop_name << ": not found" << std::endl;
+			out << "Stop " << stop_name << ": not found" << std::endl;
 			return;
 		}
 		if (buses_to_stops_.at(stop_name).size() == 0)
 		{
-			std::cout << "Stop " << stop_name << ": no buses" << std::endl;
+			out << "Stop " << stop_name << ": no buses" << std::endl;
 			return;
 		}
-		std::cout << "Stop " << stop_name << ": buses";
+		out << "Stop " << stop_name << ": buses";
 		for (const auto& bus : buses_to_stops_.at(stop_name))
 		{
 			std::cout << ' ' << bus;
 		}
-		std::cout << std::endl;
+		out << std::endl;
 		
 	}
 

@@ -262,20 +262,6 @@ namespace Catalogue
 			return distances;
 		}
 
-		void ParseRequestQuery(const TransportCatalogue& catalogue, const std::string& query)
-		{
-			std::string query_subject = query.substr(0, query.find_first_of(' '));
-			std::string name = query.substr(query.find_first_of(' ') + 1);
-			if (name.back() == ' ') { name.pop_back(); }
-			if (query_subject == "Bus")
-			{
-				catalogue.GetBusInfo(name);
-			}
-			if (query_subject == "Stop")
-			{
-				catalogue.GetStopInfo(name);
-			}
-		}
 	}
 
 }
