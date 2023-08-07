@@ -83,49 +83,6 @@ namespace Catalogue
 		return stop_obj;
 	}
 
-	/*void TransportCatalogue::GetBusInfo(std::ostream& out, const std::string_view bus_name) const
-	{
-		if (!FindBus(bus_name))
-		{
-			out << "Bus "s << bus_name << ": not found"s << std::endl;
-			return;
-		}
-
-		out << "Bus " << bus_name << ": " << route_indexes_.at(bus_name).size() << " stops on route, ";
-
-		std::set<BusStop*> unique_stops;
-		for (const auto& stop : route_indexes_.at(bus_name))
-		{
-			unique_stops.insert(stop);
-		}
-
-		out << unique_stops.size() << " unique stops, ";
-		out << std::setprecision(6) << bus_route_distances_.at(bus_name).first << " route length, ";
-		out << bus_route_distances_.at(bus_name).second << " curvature" << std::endl;
-
-	}
-
-	void TransportCatalogue::GetStopInfo(std::ostream& out, const std::string_view stop_name) const
-	{
-		if (!buses_to_stops_.count(stop_name))
-		{
-			out << "Stop " << stop_name << ": not found" << std::endl;
-			return;
-		}
-		if (buses_to_stops_.at(stop_name).size() == 0)
-		{
-			out << "Stop " << stop_name << ": no buses" << std::endl;
-			return;
-		}
-		out << "Stop " << stop_name << ": buses";
-		for (const auto& bus : buses_to_stops_.at(stop_name))
-		{
-			std::cout << ' ' << bus;
-		}
-		out << std::endl;
-
-	}*/
-
 	void TransportCatalogue::SetStopsDistances(const std::string_view stop_name, const std::pair<std::string, size_t>& distances)
 	{
 		auto it_stop_name = std::find_if(stops_.begin(), stops_.end(), [&stop_name](const BusStop& stop)

@@ -82,8 +82,6 @@ namespace Catalogue
 		bool FindBus(const std::string_view name) const;
 		Detail::BusObject GetBusInfo(std::ostream& out, const std::string_view bus_name) const;
 		Detail::StopObject GetStopInfo(std::ostream& out, const std::string_view stop_name) const;
-		/*void GetBusInfo(std::ostream& out, const std::string_view bus_name) const;
-		void GetStopInfo(std::ostream& out, const std::string_view stop_name) const;*/
 		void SetStopsDistances(const std::string_view stop_name, const std::pair<std::string, size_t>& distances);
 		void SetBusDistancesArchive();
 
