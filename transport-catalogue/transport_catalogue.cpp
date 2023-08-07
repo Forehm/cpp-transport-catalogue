@@ -44,14 +44,53 @@ namespace Catalogue
 		return it != all_buses_.end();
 	}
 
-	void TransportCatalogue::GetBusInfo(std::ostream& out, const std::string_view bus_name) const
+	Catalogue::Detail::BusObject TransportCatalogue::GetBusInfo(std::ostream& out, const std::string_view bus_name) const
+	{
+		Detail::BusObject bus_obj{};
+		if (FindBus(bus_name))
+		{
+
+			std::set<BusStop*> unique_stops;
+			for (const auto& stop : route_indexes_.at(bus_name))
+			{
+				unique_stops.insert(stop);
+			}
+
+			bus_obj.name = { bus_name.begin(), bus_name.end() };
+			bus_obj.route_length = bus_route_distances_.at(bus_name).first;
+			bus_obj.unique_stops = unique_stops.size();
+			bus_obj.stops = route_indexes_.at(bus_name).size();
+			bus_obj.curvature = bus_route_distances_.at(bus_name).second;
+			bus_obj.is_ready = true;
+		}
+		return bus_obj;
+	}
+
+	Catalogue::Detail::StopObject TransportCatalogue::GetStopInfo(std::ostream& out, const std::string_view stop_name) const
+	{
+		Detail::StopObject stop_obj{};
+		std::vector<std::string> buses;
+		if (buses_to_stops_.count(stop_name))
+		{
+			for (const auto& bus : buses_to_stops_.at(stop_name))
+			{
+				buses.push_back({bus.begin(), bus.end()});
+			}
+			stop_obj.buses = buses;
+			stop_obj.name = { stop_name.begin(), stop_name.end() };
+			stop_obj.is_ready = true;
+		}
+		return stop_obj;
+	}
+
+	/*void TransportCatalogue::GetBusInfo(std::ostream& out, const std::string_view bus_name) const
 	{
 		if (!FindBus(bus_name))
 		{
 			out << "Bus "s << bus_name << ": not found"s << std::endl;
 			return;
 		}
-		
+
 		out << "Bus " << bus_name << ": " << route_indexes_.at(bus_name).size() << " stops on route, ";
 
 		std::set<BusStop*> unique_stops;
@@ -63,7 +102,7 @@ namespace Catalogue
 		out << unique_stops.size() << " unique stops, ";
 		out << std::setprecision(6) << bus_route_distances_.at(bus_name).first << " route length, ";
 		out << bus_route_distances_.at(bus_name).second << " curvature" << std::endl;
-		
+
 	}
 
 	void TransportCatalogue::GetStopInfo(std::ostream& out, const std::string_view stop_name) const
@@ -84,8 +123,8 @@ namespace Catalogue
 			std::cout << ' ' << bus;
 		}
 		out << std::endl;
-		
-	}
+
+	}*/
 
 	void TransportCatalogue::SetStopsDistances(const std::string_view stop_name, const std::pair<std::string, size_t>& distances)
 	{

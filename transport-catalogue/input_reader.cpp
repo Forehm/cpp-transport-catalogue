@@ -48,10 +48,7 @@ namespace Catalogue
 			}
 
 			catalogue.AddStop(name, { std::stod(latitude), std::stod(longitude) });
-
-
 			stop_manager.AddStopRequest(name, distances);
-
 
 		}
 		if (entity == "Bus")
