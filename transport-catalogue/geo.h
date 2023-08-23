@@ -1,23 +1,19 @@
 #pragma once
-
 #include <cmath>
 
-namespace Catalogue
+namespace geo
 {
     const size_t EARTH_RADIUS = 6371000;
 
     struct Coordinates {
         double lat;
         double lng;
-        bool operator==(const Coordinates& other) const {
-            return lat == other.lat && lng == other.lng;
-        }
-        bool operator!=(const Coordinates& other) const {
-            return !(*this == other);
-        }
+        bool operator==(const Coordinates& other) const;
+        bool operator!=(const Coordinates& other) const;
     };
 
-    inline double ComputeDistance(Coordinates from, Coordinates to) {
+    inline double ComputeDistance(Coordinates from, Coordinates to)
+    {
         using namespace std;
         if (from == to) {
             return 0;

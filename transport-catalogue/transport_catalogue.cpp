@@ -4,6 +4,7 @@
 #include <string>
 #include "transport_catalogue.h"
 #include "geo.h"
+#include "domain.h"
 
 
 
@@ -11,7 +12,9 @@ namespace Catalogue
 {
 	using namespace std::literals::string_literals;
 
-	void TransportCatalogue::AddStop(const std::string& name, const Coordinates& coordinates)
+	
+
+	void TransportCatalogue::AddStop(const std::string& name, const geo::Coordinates& coordinates)
 	{
 		stops_.push_back({ name, coordinates });
 		bus_stop_indexes_[stops_.back().name] = &stops_.back();
@@ -44,12 +47,11 @@ namespace Catalogue
 		return it != all_buses_.end();
 	}
 
-	Catalogue::Detail::BusObject TransportCatalogue::GetBusInfo(std::ostream& out, const std::string_view bus_name) const
+	Detail::BusObject TransportCatalogue::GetBusInfo(const std::string_view bus_name) const
 	{
 		Detail::BusObject bus_obj{};
 		if (FindBus(bus_name))
 		{
-
 			std::set<BusStop*> unique_stops;
 			for (const auto& stop : route_indexes_.at(bus_name))
 			{
@@ -66,7 +68,7 @@ namespace Catalogue
 		return bus_obj;
 	}
 
-	Catalogue::Detail::StopObject TransportCatalogue::GetStopInfo(std::ostream& out, const std::string_view stop_name) const
+	Catalogue::Detail::StopObject TransportCatalogue::GetStopInfo(const std::string_view stop_name) const
 	{
 		Detail::StopObject stop_obj{};
 		std::vector<std::string> buses;
@@ -74,7 +76,7 @@ namespace Catalogue
 		{
 			for (const auto& bus : buses_to_stops_.at(stop_name))
 			{
-				buses.push_back({bus.begin(), bus.end()});
+				buses.push_back({ bus.begin(), bus.end() });
 			}
 			stop_obj.buses = buses;
 			stop_obj.name = { stop_name.begin(), stop_name.end() };
@@ -116,7 +118,7 @@ namespace Catalogue
 			double route_length_real = 0;
 			for (size_t i = 1; i < route_indexes_.at(bus_name).size(); ++i)
 			{
-				route_length += ComputeDistance(route_indexes_.at(bus_name)[i]->coordinates, route_indexes_.at(bus_name)[i - 1]->coordinates);
+				route_length += geo::ComputeDistance(route_indexes_.at(bus_name)[i]->coordinates, route_indexes_.at(bus_name)[i - 1]->coordinates);
 			}
 
 			for (auto begin = route_indexes_.at(bus_name).begin() + 1; begin != route_indexes_.at(bus_name).end(); ++begin)
@@ -131,11 +133,27 @@ namespace Catalogue
 				}
 				else
 				{
-					route_length_real += ComputeDistance((*begin - 1)->coordinates, (*begin)->coordinates);
+					route_length_real += geo::ComputeDistance((*begin - 1)->coordinates, (*begin)->coordinates);
 				}
 			}
-			bus_route_distances_[bus_name] = {route_length_real, route_length_real / route_length} ;
+			bus_route_distances_[bus_name] = { route_length_real, route_length_real / route_length };
 		}
+	}
+
+	const std::set<std::string_view> TransportCatalogue::GetBusesList() const
+	{
+		//return all_buses_;
+		std::set<std::string_view> buses;
+		for (const std::string& bus : all_buses_)
+		{
+			buses.insert(bus);
+		}
+		return buses;
+	}
+
+	std::vector<BusStop*> TransportCatalogue::GetBusStops(const std::string bus_name)
+	{
+		return route_indexes_.at(bus_name);
 	}
 
 }
