@@ -6,13 +6,14 @@
 #include <vector>
 #include "geo.h"
 #include "svg.h"
+#include "transport_catalogue.h"
 
 inline const double EPSILON = 1e-6;
 
 
 namespace map_renderer
 {
-  
+
 
     class SphereProjector {
     public:
@@ -46,7 +47,7 @@ namespace map_renderer
             if (!(std::abs(max_lon - min_lon_) < EPSILON)) {
                 width_zoom = (max_width - 2 * padding) / (max_lon - min_lon_);
             }
-            
+
             // Вычисляем коэффициент масштабирования вдоль координаты y
             std::optional<double> height_zoom;
             if (!(std::abs(max_lat_ - min_lat) < EPSILON)) {
@@ -81,8 +82,9 @@ namespace map_renderer
         double min_lon_ = 0;
         double max_lat_ = 0;
         double zoom_coeff_ = 0;
-    };
 
+
+	};
 
     struct MapVisualSettings
     {
@@ -92,7 +94,7 @@ namespace map_renderer
         double line_width = 0.0;
         double stop_radius = 0.0;
         size_t bus_label_font_size = 0;
-        svg::Point bus_label_offset = {0.0, 0.0};
+        svg::Point bus_label_offset = { 0.0, 0.0 };
         size_t stop_label_font_size = 0;
         svg::Point stop_label_offset = { 0.0, 0.0 };
         svg::Color underlayer_color = "black";
@@ -100,4 +102,31 @@ namespace map_renderer
         std::vector<svg::Color> color_palette;
     };
 
+    class MapRenderer
+    {
+    public:
+
+        MapRenderer(const MapVisualSettings& settings, const SphereProjector& projector);
+
+        void AddRoadsToMap(Catalogue::TransportCatalogue& catalogue);
+
+        void AddBusRoutesToMap(Catalogue::TransportCatalogue& catalogue);
+
+        void AddStopsToMap(Catalogue::TransportCatalogue& catalogue);
+
+        void AddStopNameToMap(Catalogue::TransportCatalogue& catalogue);
+
+        void RenderMap(std::ostream& out);
+
+    private:
+
+        svg::Document doc_;
+        SphereProjector projector_;
+        MapVisualSettings settings_;
+    };
+
+    map_renderer::SphereProjector MakeProjector(Catalogue::TransportCatalogue& catalogue, double width, double height, double padding);
+
+
+   
 }

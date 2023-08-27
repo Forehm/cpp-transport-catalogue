@@ -26,6 +26,7 @@ namespace RequestQueue
 
 	private:
 		std::vector<std::vector<std::string>> bus_request_queue_;
+
 	};
 
 	class StopRequestsQueueManager
@@ -57,10 +58,9 @@ namespace json
 
 	
 	void SetTransportCatalogue(Catalogue::TransportCatalogue& catalogue, const Node& base_requests);
-	
-	Document ExecuteJson(const Document& doc, Catalogue::TransportCatalogue& catalogue);
 
-	Document ExecuteRequest(Catalogue::TransportCatalogue& catalogue, const Node& stat_requests);
+	Document ExecuteRequests(Catalogue::TransportCatalogue& catalogue, const Node& stat_requests, map_renderer::MapVisualSettings& settings,
+		map_renderer::SphereProjector& projector);
 
 	void ParseBusJson(Catalogue::TransportCatalogue& catalogue, const Node& query);
 

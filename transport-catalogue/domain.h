@@ -52,6 +52,7 @@ namespace Catalogue
 			std::string name;
 			std::vector<std::string> buses;
 			bool is_ready = false;
+			geo::Coordinates coordinates;
 		};
 
 		struct QueryObject

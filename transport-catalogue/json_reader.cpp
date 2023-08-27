@@ -2,6 +2,7 @@
 #include <map>
 #include <vector>
 #include <string>
+#include <sstream>
 
 using namespace std::string_literals;
 
@@ -140,59 +141,93 @@ void json::SetTransportCatalogue(Catalogue::TransportCatalogue& catalogue, const
 
 }
 
-json::Document json::ExecuteJson(const Document& doc, Catalogue::TransportCatalogue& catalogue)
+json::Dict ExecuteStopRequest(Catalogue::TransportCatalogue& catalogue, const json::Node& request)
 {
-	SetTransportCatalogue(catalogue, doc.GetRoot().AsMap().at("base_requests"));
-	return ExecuteRequest(catalogue, doc.GetRoot().AsMap().at("stat_requests"));
+	json::Array arr;
+	json::Dict dict;
+	if (!catalogue.FindStop(request.AsMap().at("name").AsString()))
+	{
+		dict["request_id"] = request.AsMap().at("id").AsInt();
+		dict["error_message"] = "not found"s;
+		return dict;
+	}
+	else
+	{
+		Catalogue::Detail::StopObject stop_object = catalogue.GetStopInfo(request.AsMap().at("name").AsString());
+		for (const std::string& bus : stop_object.buses)
+		{
+			arr.push_back(bus);
+		}
+		dict["buses"] = arr;
+		dict["request_id"] = request.AsMap().at("id");
+		return dict;
+	}
 }
 
-json::Document json::ExecuteRequest(Catalogue::TransportCatalogue& catalogue, const Node& stat_requests)
+json::Dict ExecuteBusRequest(Catalogue::TransportCatalogue& catalogue, const json::Node& request)
 {
-	RequestQueue::PerformRequestQueue(catalogue);
+	json::Dict dict;
+	json::Array arr;
+	if (!catalogue.FindBus(request.AsMap().at("name").AsString()))
+	{
+		dict["request_id"] = request.AsMap().at("id").AsInt();
+		dict["error_message"] = "not found"s;
+		return dict;
+	}
+	else
+	{
+		Catalogue::Detail::BusObject bus_object = catalogue.GetBusInfo(request.AsMap().at("name").AsString());
+		dict["curvature"] = bus_object.curvature;
+		dict["request_id"] = request.AsMap().at("id");
+		dict["route_length"] = bus_object.route_length;
+		dict["stop_count"] = static_cast<int>(bus_object.stops);
+		dict["unique_stop_count"] = static_cast<int>(bus_object.unique_stops);
+		return dict;
+	}
+
+}
+
+json::Dict ExecuteMapRequest(Catalogue::TransportCatalogue& catalogue, const json::Node& request, 
+	map_renderer::MapVisualSettings& settings, map_renderer::SphereProjector& projector)
+{
+	json::Dict dict;
+	json::Array arr;
+
+	std::ostringstream ss;
+	dict["request_id"] = request.AsMap().at("id").AsInt();
+	svg::Document doc;
+	map_renderer::MapRenderer map(settings, projector);
+	map.AddRoadsToMap(catalogue);
+	map.AddBusRoutesToMap(catalogue);
+	map.AddStopsToMap(catalogue);
+	map.AddStopNameToMap(catalogue);
+
+	map.RenderMap(ss);
+	dict["map"] = ss.str();
+
+	return dict;
+}
+
+json::Document json::ExecuteRequests(Catalogue::TransportCatalogue& catalogue, const Node& stat_requests,
+	map_renderer::MapVisualSettings& settings, map_renderer::SphereProjector& projector)
+{
 	Array result;
-	
+
 	for (const Node& request : stat_requests.AsArray())
 	{
 		Dict dict;
 		Array arr;
 		if (request.AsMap().at("type").AsString() == "Stop")
 		{
-			if (!catalogue.FindStop(request.AsMap().at("name").AsString()))
-			{
-				dict["request_id"] = request.AsMap().at("id").AsInt();
-				dict["error_message"] = "not found"s;
-				result.push_back(dict);
-			}
-			else
-			{
-				Catalogue::Detail::StopObject stop_object = catalogue.GetStopInfo(request.AsMap().at("name").AsString());
-				for (const std::string& bus : stop_object.buses)
-				{
-					arr.push_back(bus);
-				}
-				dict["buses"] = arr;
-				dict["request_id"] = request.AsMap().at("id");
-				result.push_back(dict);
-			}
+			result.push_back(ExecuteStopRequest(catalogue, request));
 		}
 		if (request.AsMap().at("type").AsString() == "Bus")
 		{
-			if (!catalogue.FindBus(request.AsMap().at("name").AsString()))
-			{
-				dict["request_id"] = request.AsMap().at("id").AsInt();
-				dict["error_message"] = "not found"s;
-				result.push_back(dict);
-			}
-			else
-			{
-				Catalogue::Detail::BusObject bus_object = catalogue.GetBusInfo(request.AsMap().at("name").AsString());
-				dict["curvature"] = bus_object.curvature;
-				dict["request_id"] = request.AsMap().at("id");
-				dict["route_length"] = bus_object.route_length;
-				dict["stop_count"] = static_cast<int>(bus_object.stops);
-				dict["unique_stop_count"] = static_cast<int>(bus_object.unique_stops);
-				result.push_back(dict);
-			}
+			result.push_back(ExecuteBusRequest(catalogue, request));
+		}
+		if (request.AsMap().at("type").AsString() == "Map")
+		{
+			result.push_back(ExecuteMapRequest(catalogue, request, settings, projector));
 		}
 	}
 	Document doc(result);
@@ -206,10 +241,12 @@ void json::ParseBusJson(Catalogue::TransportCatalogue& catalogue, const Node& qu
 
 	if (query.AsMap().at("is_roundtrip"s).AsBool() == true)
 	{
+		catalogue.AddRoundTripBus(bus_name);
 		for (auto stop : query.AsMap().at("stops"s).AsArray())
 		{
 			stops.push_back(stop.AsString());
 		}
+		catalogue.AddLastStopToBus(bus_name, stops.back());
 	}
 	else
 	{
@@ -217,6 +254,7 @@ void json::ParseBusJson(Catalogue::TransportCatalogue& catalogue, const Node& qu
 		{
 			stops.push_back(stop.AsString());
 		}
+		catalogue.AddLastStopToBus(bus_name, stops.back());
 		auto& container = query.AsMap().at("stops"s).AsArray();
 		for (auto it = container.rbegin() + 1; it != container.rend(); ++it)
 		{
@@ -261,25 +299,30 @@ void json::SetMapVisualSettings(map_renderer::MapVisualSettings& map_settings, c
 	if (doc.AsMap().count("stop_radius"s)) { temp_settings.stop_radius = doc.AsMap().at("stop_radius"s).AsDouble(); }
 	if (doc.AsMap().count("line_width"s)) { temp_settings.line_width = doc.AsMap().at("line_width"s).AsDouble(); }
 	if (doc.AsMap().count("bus_label_font_size"s)) { temp_settings.bus_label_font_size = static_cast<size_t>(doc.AsMap().at("bus_label_font_size"s).AsInt()); }
-	if (doc.AsMap().count("bus_label_offset"s)) { temp_settings.bus_label_offset = { doc.AsMap().at("bus_label_offset"s).AsArray()[0].AsDouble(),
-		doc.AsMap().at("bus_label_offset"s).AsArray()[1].AsDouble() }; }
+	if (doc.AsMap().count("bus_label_offset"s)) {
+		temp_settings.bus_label_offset = { doc.AsMap().at("bus_label_offset"s).AsArray()[0].AsDouble(),
+doc.AsMap().at("bus_label_offset"s).AsArray()[1].AsDouble() };
+	}
 	if (doc.AsMap().count("stop_label_font_size"s)) { temp_settings.stop_label_font_size = doc.AsMap().at("stop_label_font_size"s).AsInt(); }
 	if (doc.AsMap().count("stop_label_offset"s)) {
-		temp_settings.stop_label_offset = {doc.AsMap().at("stop_label_offset"s).AsArray()[0].AsDouble(),
-			doc.AsMap().at("stop_label_offset"s).AsArray()[1].AsDouble() };}
+		temp_settings.stop_label_offset = { doc.AsMap().at("stop_label_offset"s).AsArray()[0].AsDouble(),
+			doc.AsMap().at("stop_label_offset"s).AsArray()[1].AsDouble() };
+	}
 
 
 	if (doc.AsMap().count("underlayer_color"s))
 	{
-		std::vector<double> arr; 
+		std::vector<double> arr;
 		svg::Color color;
 		if (doc.AsMap().at("underlayer_color").IsArray())
 		{
 			for (auto color : doc.AsMap().at("underlayer_color").AsArray())
 			{
-				if(color.IsInt()) { arr.push_back(color.AsInt()); }
-				if(color.IsPureDouble()) 
-				{ arr.push_back(color.AsDouble()); }
+				if (color.IsInt()) { arr.push_back(color.AsInt()); }
+				if (color.IsPureDouble())
+				{
+					arr.push_back(color.AsDouble());
+				}
 			}
 			if (arr.size() == 3)
 			{
@@ -304,13 +347,13 @@ void json::SetMapVisualSettings(map_renderer::MapVisualSettings& map_settings, c
 		for (auto color : doc.AsMap().at("color_palette").AsArray())
 		{
 			if (color.IsString()) { arr.push_back(color.AsString()); }
-			if (color.IsArray()) 
-			{ 
+			if (color.IsArray())
+			{
 				if (color.AsArray().size() == 3)
 				{
 					arr.push_back(svg::Rgb(color.AsArray()[0].AsInt(), color.AsArray()[1].AsInt(), color.AsArray()[2].AsInt()));
 				}
-				else if(color.AsArray().size() == 4)
+				else if (color.AsArray().size() == 4)
 				{
 					arr.push_back(svg::Rgba(color.AsArray()[0].AsInt(), color.AsArray()[1].AsInt(), color.AsArray()[2].AsInt(), color.AsArray()[3].AsDouble()));
 				}

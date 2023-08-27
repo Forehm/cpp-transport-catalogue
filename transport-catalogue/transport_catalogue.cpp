@@ -81,6 +81,7 @@ namespace Catalogue
 			stop_obj.buses = buses;
 			stop_obj.name = { stop_name.begin(), stop_name.end() };
 			stop_obj.is_ready = true;
+			stop_obj.coordinates = bus_stop_indexes_.at(stop_name)->coordinates;
 		}
 		return stop_obj;
 	}
@@ -142,7 +143,6 @@ namespace Catalogue
 
 	const std::set<std::string_view> TransportCatalogue::GetBusesList() const
 	{
-		//return all_buses_;
 		std::set<std::string_view> buses;
 		for (const std::string& bus : all_buses_)
 		{
@@ -154,6 +154,36 @@ namespace Catalogue
 	std::vector<BusStop*> TransportCatalogue::GetBusStops(const std::string bus_name)
 	{
 		return route_indexes_.at(bus_name);
+	}
+
+	void TransportCatalogue::AddRoundTripBus(const std::string& bus_name)
+	{
+		round_trip_buses.insert(bus_name);
+	}
+
+	bool TransportCatalogue::IsBusRoundTrip(const std::string bus_name)
+	{
+		return round_trip_buses.count(bus_name);
+	}
+
+	std::string TransportCatalogue::GetLastStopToBus(const std::string bus_name)
+	{
+		std::string stop_name = "";
+		if (last_stop_to_buses_.count(bus_name))
+		{
+			stop_name = last_stop_to_buses_.at(bus_name);
+		}
+		return stop_name;
+	}
+
+	void TransportCatalogue::AddLastStopToBus(const std::string bus_name, const std::string stop_name)
+	{
+		last_stop_to_buses_[bus_name] = stop_name;
+	}
+
+	std::unordered_map<std::string_view, const BusStop*> TransportCatalogue::GetBuses()
+	{
+		return bus_stop_indexes_;
 	}
 
 }

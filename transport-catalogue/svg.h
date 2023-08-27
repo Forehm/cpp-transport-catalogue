@@ -135,10 +135,13 @@ namespace svg {
             : x(x)
             , y(y) {
         }
+
+       
+
         double x = 0;
         double y = 0;
     };
-
+   
 
     struct RenderContext {
         RenderContext(std::ostream& out)

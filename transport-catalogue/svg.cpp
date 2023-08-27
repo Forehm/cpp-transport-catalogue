@@ -184,14 +184,17 @@ namespace svg {
 
     void Rgb::operator=(Rgb other)
     {
-        Rgb temp(other.red, other.green, other.blue);
-        std::swap(*this, temp);
+        this->red = other.red;
+        this->green = other.green;
+        this->blue = other.blue;
     }
 
     void Rgba::operator=(Rgba other)
     {
-        Rgba temp(other.red, other.green, other.blue, other.opacity);
-        std::swap(*this, temp);
+       this->red = other.red;
+        this->green = other.green;
+        this->blue = other.blue;
+        this->opacity = other.opacity;
     }
 
     void ColorPrinter::operator()(std::monostate)
@@ -215,6 +218,8 @@ namespace svg {
         out << "rgba("sv << static_cast<uint16_t>(rgba.red) << ","sv << static_cast<uint16_t>(rgba.green) << ","sv
             << static_cast<uint16_t>(rgba.blue) << ","sv << rgba.opacity << ")"sv;
     }
+
+    
 
 }  // namespace svg
 
