@@ -4,7 +4,7 @@ This program is to solve problems with making a route between different stops an
 
 requirements: C++17, x86;
 
-Еhe program requires json document on input. Document consists of 2 parts - base_requests and stat_requests. Forst part is to load data to the database, the second part is a part with different queries.
+Еhe program requires json document on input. Document consists of 2 parts - base_requests and stat_requests. First part is to load data to the database, the second part is a part with different queries.
 base_requests may consist of the queries of 2 types:
 1) type is Bus
 {
