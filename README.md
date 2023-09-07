@@ -16,10 +16,10 @@ base_requests may consist of the queries of 2 types:
 2) type is Stop
 {
       "type": "Stop",
-      "name": "Ривьерский мост",
+      "name": "metro"
       "latitude": 43.587795,
       "longitude": 39.716901,
-      "road_distances": {"Морской вокзал": 850}
+      "road_distances": {"bridge": 850}
 }
 when the database is fullfilled, it can process the stat_requests. We have 3 types of stat_requests:
 1)Stop
