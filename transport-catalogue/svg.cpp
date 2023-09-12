@@ -9,13 +9,10 @@ namespace svg {
     void Object::Render(const RenderContext& context) const {
         context.RenderIndent();
 
-        // Делегируем вывод тега своим подклассам
         RenderObject(context);
 
         context.out << std::endl;
     }
-
-    // ---------- Circle ------------------
 
     Circle& Circle::SetCenter(Point center) {
         center_ = center;
@@ -191,7 +188,7 @@ namespace svg {
 
     void Rgba::operator=(Rgba other)
     {
-       this->red = other.red;
+        this->red = other.red;
         this->green = other.green;
         this->blue = other.blue;
         this->opacity = other.opacity;
@@ -219,9 +216,9 @@ namespace svg {
             << static_cast<uint16_t>(rgba.blue) << ","sv << rgba.opacity << ")"sv;
     }
 
-    
 
-}  // namespace svg
+
+} 
 
 
 
@@ -234,20 +231,15 @@ std::ostream& operator << (std::ostream& out, svg::Color color)
 
 namespace shapes {
 
-    // ---------- Triangle ------------------
-
     Triangle::Triangle(svg::Point p1, svg::Point p2, svg::Point p3)
         : p1_(p1)
         , p2_(p2)
         , p3_(p3) {
     }
 
-    // Реализует метод Draw интерфейса svg::Drawable
     void Triangle::Draw(svg::ObjectContainer& container) const {
         container.Add(svg::Polyline().AddPoint(p1_).AddPoint(p2_).AddPoint(p3_).AddPoint(p1_));
     }
-
-    // ---------- Star ------------------
 
     Star::Star(svg::Point center, double outer_rad, double inner_rad, int num_rays) {
         polyline_ = CreateStar(center, outer_rad, inner_rad, num_rays);
@@ -273,8 +265,6 @@ namespace shapes {
         polyline.SetFillColor("red").SetStrokeColor("black");
         return polyline;
     }
-
-    // ---------- Snowman ------------------
 
     Snowman::Snowman(svg::Point head_center, double head_radius) {
         head_center_ = head_center;
@@ -305,4 +295,4 @@ namespace shapes {
     }
 
 
-} //namespace shapes
+}

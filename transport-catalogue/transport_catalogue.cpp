@@ -12,7 +12,7 @@ namespace Catalogue
 {
 	using namespace std::literals::string_literals;
 
-	
+
 
 	void TransportCatalogue::AddStop(const std::string& name, const geo::Coordinates& coordinates)
 	{

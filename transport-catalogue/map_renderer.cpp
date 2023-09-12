@@ -106,7 +106,7 @@ void map_renderer::MapRenderer::AddBusRoutesToMap(Catalogue::TransportCatalogue&
 	}
 }
 
-void map_renderer::MapRenderer::AddStopsToMap(Catalogue::TransportCatalogue & catalogue)
+void map_renderer::MapRenderer::AddStopsToMap(Catalogue::TransportCatalogue& catalogue)
 
 {
 	std::set<std::string> bus_stops;
@@ -177,4 +177,3 @@ void map_renderer::MapRenderer::RenderMap(std::ostream& out)
 {
 	this->doc_.Render(out);
 }
-

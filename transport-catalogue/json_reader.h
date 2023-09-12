@@ -2,6 +2,9 @@
 #include "transport_catalogue.h"
 #include "json.h"
 #include "map_renderer.h"
+#include "json_builder.h"
+
+
 
 namespace RequestQueue
 {
@@ -56,7 +59,7 @@ namespace RequestQueue
 namespace json
 {
 
-	
+
 	void SetTransportCatalogue(Catalogue::TransportCatalogue& catalogue, const Node& base_requests);
 
 	Document ExecuteRequests(Catalogue::TransportCatalogue& catalogue, const Node& stat_requests, map_renderer::MapVisualSettings& settings,

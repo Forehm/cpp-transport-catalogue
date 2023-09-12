@@ -126,14 +126,13 @@ namespace RequestQueue
 
 void json::SetTransportCatalogue(Catalogue::TransportCatalogue& catalogue, const Node& base_requests)
 {
-	for (const Node& query : base_requests.AsArray())
+	for (const json::Node& query : base_requests.AsArray())
 	{
-
-		if (query.AsMap().at("type"s).AsString() == "Bus")
+		if (query.AsDict().at("type"s).AsString() == "Bus")
 		{
 			ParseBusJson(catalogue, query);
 		}
-		if (query.AsMap().at("type"s).AsString() == "Stop")
+		if (query.AsDict().at("type"s).AsString() == "Stop")
 		{
 			ParseStopJson(catalogue, query);
 		}
@@ -143,106 +142,112 @@ void json::SetTransportCatalogue(Catalogue::TransportCatalogue& catalogue, const
 
 json::Dict ExecuteStopRequest(Catalogue::TransportCatalogue& catalogue, const json::Node& request)
 {
-	json::Array arr;
-	json::Dict dict;
-	if (!catalogue.FindStop(request.AsMap().at("name").AsString()))
+	json::Builder answer;
+	answer.StartDict();
+	if (!catalogue.FindStop(request.AsDict().at("name").AsString()))
 	{
-		dict["request_id"] = request.AsMap().at("id").AsInt();
-		dict["error_message"] = "not found"s;
-		return dict;
+		answer.Key("request_id"s).Value(request.AsDict().at("id").AsInt());
+		answer.Key("error_message"s).Value("not found"s);
+		answer.EndDict();
+		return answer.Build().AsDict();
 	}
 	else
 	{
-		Catalogue::Detail::StopObject stop_object = catalogue.GetStopInfo(request.AsMap().at("name").AsString());
+		answer.Key("buses"s).StartArray();
+		Catalogue::Detail::StopObject stop_object = catalogue.GetStopInfo(request.AsDict().at("name").AsString());
 		for (const std::string& bus : stop_object.buses)
 		{
-			arr.push_back(bus);
+			answer.Value(bus);
 		}
-		dict["buses"] = arr;
-		dict["request_id"] = request.AsMap().at("id");
-		return dict;
+		answer.EndArray();
+		answer.Key("request_id"s).Value(request.AsDict().at("id").AsInt());
+		answer.EndDict();
+		return answer.Build().AsDict();
 	}
 }
 
 json::Dict ExecuteBusRequest(Catalogue::TransportCatalogue& catalogue, const json::Node& request)
 {
-	json::Dict dict;
-	json::Array arr;
-	if (!catalogue.FindBus(request.AsMap().at("name").AsString()))
+	json::Builder answer;
+	answer.StartDict();
+	if (!catalogue.FindBus(request.AsDict().at("name").AsString()))
 	{
-		dict["request_id"] = request.AsMap().at("id").AsInt();
-		dict["error_message"] = "not found"s;
-		return dict;
+		answer.Key("request_id"s).Value(request.AsDict().at("id").AsInt());
+		answer.Key("error_message"s).Value("not found"s);
+		answer.EndDict();
+		return answer.Build().AsDict();
 	}
 	else
 	{
-		Catalogue::Detail::BusObject bus_object = catalogue.GetBusInfo(request.AsMap().at("name").AsString());
-		dict["curvature"] = bus_object.curvature;
-		dict["request_id"] = request.AsMap().at("id");
-		dict["route_length"] = bus_object.route_length;
-		dict["stop_count"] = static_cast<int>(bus_object.stops);
-		dict["unique_stop_count"] = static_cast<int>(bus_object.unique_stops);
-		return dict;
+		Catalogue::Detail::BusObject bus_object = catalogue.GetBusInfo(request.AsDict().at("name").AsString());
+		
+		answer.Key("curvature"s).Value(bus_object.curvature);
+		answer.Key("request_id"s).Value(request.AsDict().at("id"s).AsInt());
+		answer.Key("route_length"s).Value(bus_object.route_length);
+		answer.Key("stop_count"s).Value(static_cast<int>(bus_object.stops));
+		answer.Key("unique_stop_count"s).Value(static_cast<int>(bus_object.unique_stops));
+		answer.EndDict();
+		return answer.Build().AsDict();
 	}
-
+	 
 }
 
-json::Dict ExecuteMapRequest(Catalogue::TransportCatalogue& catalogue, const json::Node& request, 
+json::Dict ExecuteMapRequest(Catalogue::TransportCatalogue& catalogue, const json::Node& request,
 	map_renderer::MapVisualSettings& settings, map_renderer::SphereProjector& projector)
 {
-	json::Dict dict;
-	json::Array arr;
+	json::Builder answer;
+	answer.StartDict();
+	answer.Key("request_id"s).Value(request.AsDict().at("id").AsInt());
 
-	std::ostringstream ss;
-	dict["request_id"] = request.AsMap().at("id").AsInt();
 	svg::Document doc;
+	std::ostringstream ss;
 	map_renderer::MapRenderer map(settings, projector);
 	map.AddRoadsToMap(catalogue);
 	map.AddBusRoutesToMap(catalogue);
 	map.AddStopsToMap(catalogue);
 	map.AddStopNameToMap(catalogue);
-
 	map.RenderMap(ss);
-	dict["map"] = ss.str();
 
-	return dict;
+	answer.Key("map"s).Value(ss.str()).EndDict();
+	return answer.Build().AsDict();
 }
 
 json::Document json::ExecuteRequests(Catalogue::TransportCatalogue& catalogue, const Node& stat_requests,
 	map_renderer::MapVisualSettings& settings, map_renderer::SphereProjector& projector)
 {
-	Array result;
+	
+	json::Builder result;
+	result.StartArray();
 
 	for (const Node& request : stat_requests.AsArray())
 	{
-		Dict dict;
-		Array arr;
-		if (request.AsMap().at("type").AsString() == "Stop")
+		if (request.AsDict().at("type").AsString() == "Stop")
 		{
-			result.push_back(ExecuteStopRequest(catalogue, request));
+			result.Value(ExecuteStopRequest(catalogue, request));
 		}
-		if (request.AsMap().at("type").AsString() == "Bus")
+		if (request.AsDict().at("type").AsString() == "Bus")
 		{
-			result.push_back(ExecuteBusRequest(catalogue, request));
+			result.Value(ExecuteBusRequest(catalogue, request));
 		}
-		if (request.AsMap().at("type").AsString() == "Map")
+		if (request.AsDict().at("type").AsString() == "Map")
 		{
-			result.push_back(ExecuteMapRequest(catalogue, request, settings, projector));
+			result.Value(ExecuteMapRequest(catalogue, request, settings, projector));
 		}
 	}
-	Document doc(result);
-	return doc;
+	result.EndArray();
+
+	return Document(result.Build());
 }
 
 void json::ParseBusJson(Catalogue::TransportCatalogue& catalogue, const Node& query)
 {
 	std::vector<std::string> stops;
-	std::string bus_name = query.AsMap().at("name"s).AsString();
+	std::string bus_name = query.AsDict().at("name"s).AsString();
 
-	if (query.AsMap().at("is_roundtrip"s).AsBool() == true)
+	if (query.AsDict().at("is_roundtrip"s).AsBool() == true)
 	{
 		catalogue.AddRoundTripBus(bus_name);
-		for (auto stop : query.AsMap().at("stops"s).AsArray())
+		for (auto stop : query.AsDict().at("stops"s).AsArray())
 		{
 			stops.push_back(stop.AsString());
 		}
@@ -250,12 +255,12 @@ void json::ParseBusJson(Catalogue::TransportCatalogue& catalogue, const Node& qu
 	}
 	else
 	{
-		for (auto stop : query.AsMap().at("stops"s).AsArray())
+		for (auto stop : query.AsDict().at("stops"s).AsArray())
 		{
 			stops.push_back(stop.AsString());
 		}
 		catalogue.AddLastStopToBus(bus_name, stops.back());
-		auto& container = query.AsMap().at("stops"s).AsArray();
+		auto& container = query.AsDict().at("stops"s).AsArray();
 		for (auto it = container.rbegin() + 1; it != container.rend(); ++it)
 		{
 			stops.push_back(it->AsString());
@@ -274,14 +279,14 @@ void json::ParseBusJson(Catalogue::TransportCatalogue& catalogue, const Node& qu
 
 void json::ParseStopJson(Catalogue::TransportCatalogue& catalogue, const Node& query)
 {
-	std::string stop_name = query.AsMap().at("name"s).AsString();
-	double latitude = query.AsMap().at("latitude"s).AsDouble();
-	double longitude = query.AsMap().at("longitude"s).AsDouble();
+	std::string stop_name = query.AsDict().at("name"s).AsString();
+	double latitude = query.AsDict().at("latitude"s).AsDouble();
+	double longitude = query.AsDict().at("longitude"s).AsDouble();
 	catalogue.AddStop(stop_name, { latitude, longitude });
 
 
 	std::vector<std::pair<std::string, size_t>> distances;
-	for (const auto& [stop, distance] : query.AsMap().at("road_distances"s).AsMap())
+	for (const auto& [stop, distance] : query.AsDict().at("road_distances"s).AsDict())
 	{
 		distances.push_back({ stop, distance.AsInt() });
 	}
@@ -293,30 +298,30 @@ void json::ParseStopJson(Catalogue::TransportCatalogue& catalogue, const Node& q
 void json::SetMapVisualSettings(map_renderer::MapVisualSettings& map_settings, const Node& doc)
 {
 	map_renderer::MapVisualSettings temp_settings;
-	if (doc.AsMap().count("width"s)) { temp_settings.width = doc.AsMap().at("width"s).AsDouble(); }
-	if (doc.AsMap().count("height"s)) { temp_settings.height = doc.AsMap().at("height"s).AsDouble(); }
-	if (doc.AsMap().count("padding"s)) { temp_settings.padding = doc.AsMap().at("padding"s).AsDouble(); }
-	if (doc.AsMap().count("stop_radius"s)) { temp_settings.stop_radius = doc.AsMap().at("stop_radius"s).AsDouble(); }
-	if (doc.AsMap().count("line_width"s)) { temp_settings.line_width = doc.AsMap().at("line_width"s).AsDouble(); }
-	if (doc.AsMap().count("bus_label_font_size"s)) { temp_settings.bus_label_font_size = static_cast<size_t>(doc.AsMap().at("bus_label_font_size"s).AsInt()); }
-	if (doc.AsMap().count("bus_label_offset"s)) {
-		temp_settings.bus_label_offset = { doc.AsMap().at("bus_label_offset"s).AsArray()[0].AsDouble(),
-doc.AsMap().at("bus_label_offset"s).AsArray()[1].AsDouble() };
+	if (doc.AsDict().count("width"s)) { temp_settings.width = doc.AsDict().at("width"s).AsDouble(); }
+	if (doc.AsDict().count("height"s)) { temp_settings.height = doc.AsDict().at("height"s).AsDouble(); }
+	if (doc.AsDict().count("padding"s)) { temp_settings.padding = doc.AsDict().at("padding"s).AsDouble(); }
+	if (doc.AsDict().count("stop_radius"s)) { temp_settings.stop_radius = doc.AsDict().at("stop_radius"s).AsDouble(); }
+	if (doc.AsDict().count("line_width"s)) { temp_settings.line_width = doc.AsDict().at("line_width"s).AsDouble(); }
+	if (doc.AsDict().count("bus_label_font_size"s)) { temp_settings.bus_label_font_size = static_cast<size_t>(doc.AsDict().at("bus_label_font_size"s).AsInt()); }
+	if (doc.AsDict().count("bus_label_offset"s)) {
+		temp_settings.bus_label_offset = { doc.AsDict().at("bus_label_offset"s).AsArray()[0].AsDouble(),
+		doc.AsDict().at("bus_label_offset"s).AsArray()[1].AsDouble() };
 	}
-	if (doc.AsMap().count("stop_label_font_size"s)) { temp_settings.stop_label_font_size = doc.AsMap().at("stop_label_font_size"s).AsInt(); }
-	if (doc.AsMap().count("stop_label_offset"s)) {
-		temp_settings.stop_label_offset = { doc.AsMap().at("stop_label_offset"s).AsArray()[0].AsDouble(),
-			doc.AsMap().at("stop_label_offset"s).AsArray()[1].AsDouble() };
+	if (doc.AsDict().count("stop_label_font_size"s)) { temp_settings.stop_label_font_size = doc.AsDict().at("stop_label_font_size"s).AsInt(); }
+	if (doc.AsDict().count("stop_label_offset"s)) {
+		temp_settings.stop_label_offset = { doc.AsDict().at("stop_label_offset"s).AsArray()[0].AsDouble(),
+			doc.AsDict().at("stop_label_offset"s).AsArray()[1].AsDouble() };
 	}
 
 
-	if (doc.AsMap().count("underlayer_color"s))
+	if (doc.AsDict().count("underlayer_color"s))
 	{
 		std::vector<double> arr;
 		svg::Color color;
-		if (doc.AsMap().at("underlayer_color").IsArray())
+		if (doc.AsDict().at("underlayer_color").IsArray())
 		{
-			for (auto color : doc.AsMap().at("underlayer_color").AsArray())
+			for (auto color : doc.AsDict().at("underlayer_color").AsArray())
 			{
 				if (color.IsInt()) { arr.push_back(color.AsInt()); }
 				if (color.IsPureDouble())
@@ -333,18 +338,18 @@ doc.AsMap().at("bus_label_offset"s).AsArray()[1].AsDouble() };
 				color = svg::Rgba(static_cast<uint8_t>(arr[0]), static_cast<uint8_t>(arr[1]), static_cast<uint8_t>(arr[2]), arr[3]);
 			}
 		}
-		if (doc.AsMap().at("underlayer_color").IsString())
+		if (doc.AsDict().at("underlayer_color").IsString())
 		{
-			color = doc.AsMap().at("underlayer_color").AsString();
+			color = doc.AsDict().at("underlayer_color").AsString();
 		}
 		temp_settings.underlayer_color = color;
 	}
 
-	if (doc.AsMap().count("underlayer_width"s)) { temp_settings.underlayer_width = doc.AsMap().at("underlayer_width"s).AsDouble(); }
-	if (doc.AsMap().count("color_palette"s))
+	if (doc.AsDict().count("underlayer_width"s)) { temp_settings.underlayer_width = doc.AsDict().at("underlayer_width"s).AsDouble(); }
+	if (doc.AsDict().count("color_palette"s))
 	{
 		std::vector<svg::Color> arr;
-		for (auto color : doc.AsMap().at("color_palette").AsArray())
+		for (auto color : doc.AsDict().at("color_palette").AsArray())
 		{
 			if (color.IsString()) { arr.push_back(color.AsString()); }
 			if (color.IsArray())

@@ -52,7 +52,7 @@ namespace svg {
         uint8_t green = 0;
         uint8_t blue = 0;
     };
-     
+
     class Rgba : public Rgb
     {
     public:
@@ -136,12 +136,12 @@ namespace svg {
             , y(y) {
         }
 
-       
+
 
         double x = 0;
         double y = 0;
     };
-   
+
 
     struct RenderContext {
         RenderContext(std::ostream& out)
@@ -210,22 +210,16 @@ namespace svg {
     class Text : public Object, public PathProps<Text> {
     public:
 
-        // Задаёт координаты опорной точки (атрибуты x и y)
         Text& SetPosition(Point pos);
 
-        // Задаёт смещение относительно опорной точки (атрибуты dx, dy)
         Text& SetOffset(Point offset);
 
-        // Задаёт размеры шрифта (атрибут font-size)
         Text& SetFontSize(uint32_t size);
 
-        // Задаёт название шрифта (атрибут font-family)
         Text& SetFontFamily(std::string font_family);
 
-        // Задаёт толщину шрифта (атрибут font-weight)
         Text& SetFontWeight(std::string font_weight);
 
-        // Задаёт текстовое содержимое объекта (отображается внутри тега text)
         Text& SetData(std::string data);
 
     private:
@@ -267,17 +261,11 @@ namespace svg {
 
     class Document : public ObjectContainer {
     public:
-        // Метод Add добавляет в svg-документ любой объект-наследник svg::Object.
-        // Пример использования:
-        // Document doc;
-        // doc.Add(Circle().SetCenter({20, 30}).SetRadius(15));
 
         Document() = default;
 
-        // Добавляет в svg-документ объект-наследник svg::Object
         void AddPtr(std::unique_ptr<Object>&& obj) override;
 
-        // Выводит в ostream svg-представление документа
         void Render(std::ostream& out) const;
 
     };
@@ -313,9 +301,9 @@ namespace svg {
         }
     }
 
-    
 
-}  // namespace svg
+
+}
 
 
 
@@ -330,7 +318,6 @@ namespace shapes
     public:
         Triangle(svg::Point p1, svg::Point p2, svg::Point p3);
 
-        // Реализует метод Draw интерфейса svg::Drawable
         void Draw(svg::ObjectContainer& container) const override;
 
     private:
@@ -361,4 +348,4 @@ namespace shapes
         svg::Point head_center_;
         double head_radius_;
     };
-} // namespace shapes 
+} 
