@@ -1,125 +1,109 @@
-#pragma once
-
-#include <memory>
-#include <stack>
-#include <string>
-
 #include "json.h"
 
-namespace json {
+namespace json 
+{
+    class ItemContext;
+    class KeyItemContext;
+    class ValueContext;
+    class DictItemContext;
+    class ArrayItemContext;
 
-    class BuildConstructor;
-    class BuildContextFirst;
-    class BuildContextSecond;
-    class KeyContext;
-    class ValueKeyContext;
-    class ValueArrayContext;
-    class DictContext;
-    class ArrayContext;
-    class Builder;
-
-    class BuildConstructor {
+    class Builder 
+    {
     public:
-        explicit BuildConstructor(Builder& builder);
+        Builder();
+        KeyItemContext Key(std::string key);
+        Builder& Value(Node value);
+        DictItemContext StartDict();
+        ArrayItemContext StartArray();
+        Builder& EndDict();
+        Builder& EndArray();
+        Node Build();
 
-    protected:
+    private:
+        Node root_;
+        std::vector<Node*> nodes_stack_;
+
+        template <typename T>
+        void InputResult(T elem) 
+        {
+            if (nodes_stack_.back()->IsArray()) 
+            {
+                const_cast<Array&>(nodes_stack_.back()->AsArray()).push_back(elem);
+                nodes_stack_.emplace_back(&const_cast<Array&>(nodes_stack_.back()->AsArray()).back());
+            }
+            else 
+            {
+                *nodes_stack_.back() = elem;
+            }
+        }
+    };
+
+    class ItemContext 
+    {
+    public:
+        ItemContext(Builder& builder) :builder_(builder) 
+        {
+        };
+        KeyItemContext Key(std::string key);
+        Builder& Value(Node value);
+        DictItemContext StartDict();
+        ArrayItemContext StartArray();
+        Builder& EndDict();
+        Builder& EndArray();
+    private:
         Builder& builder_;
     };
 
-    class BuildContextFirst : public BuildConstructor {
+    class KeyItemContext :public ItemContext 
+    {
     public:
-        explicit BuildContextFirst(Builder& builder);
+        KeyItemContext(Builder& builder) : ItemContext(builder) 
+        {
+        };
 
-        DictContext& StartDict();
+        ValueContext Value(Node value);
 
-        ArrayContext& StartArray();
+        KeyItemContext Key(std::string key) = delete;
+        Builder& EndDict() = delete;
+        Builder& EndArray() = delete;
     };
 
-    class BuildContextSecond : public BuildConstructor {
+    class ValueContext :public ItemContext 
+    {
     public:
-        explicit BuildContextSecond(Builder& builder);
-
-        KeyContext& Key(std::string key);
-
-        Builder& EndDict();
+        ValueContext(Builder& builder) :ItemContext(builder) 
+        {
+        };
+        Builder& Value(Node value) = delete;
+        DictItemContext StartDict() = delete;
+        ArrayItemContext StartArray() = delete;
+        Builder& EndArray() = delete;
     };
 
-    class KeyContext : public BuildContextFirst {
+    class DictItemContext :public ItemContext 
+    {
     public:
-        explicit KeyContext(Builder& builder);
-
-        ValueKeyContext& Value(Node::Value value);
+        DictItemContext(Builder& builder) :ItemContext(builder) 
+        {
+        };
+        Builder& Value(Node value) = delete;
+        DictItemContext StartDict() = delete;
+        ArrayItemContext StartArray() = delete;
+        Builder& EndArray() = delete;
     };
 
-    class ValueKeyContext : public BuildContextSecond {
+    class ArrayItemContext :public ItemContext 
+    {
     public:
-        explicit ValueKeyContext(Builder& builder);
-    };
+        ArrayItemContext(Builder& builder) :ItemContext(builder) 
+        {
+        };
 
-    class ValueArrayContext : public BuildContextFirst {
-    public:
-        explicit ValueArrayContext(Builder& builder);
+        ArrayItemContext Value(Node value);
 
-        ValueArrayContext& Value(Node::Value value);
-
-        Builder& EndArray();
-    };
-
-    class DictContext : public BuildContextSecond {
-    public:
-        explicit DictContext(Builder& builder);
-    };
-
-    class ArrayContext : public ValueArrayContext {
-    public:
-        explicit ArrayContext(Builder& builder);
-    };
-
-    class Builder final : virtual public KeyContext, virtual public ValueKeyContext,
-        virtual public DictContext, virtual public ArrayContext {
-    public:
-        Builder();
-
-        KeyContext& Key(std::string key);
-
-        Builder& Value(Node::Value value);
-
-        DictContext& StartDict();
-
-        Builder& EndDict();
-
-        ArrayContext& StartArray();
-
-        Builder& EndArray();
-
-        Node Build() const;
-
-    private:
-        bool UnableAdd() const;
-
-        bool IsMakeObj() const;
-
-        bool UnableUseKey() const;
-
-        bool UnableUseValue() const;
-
-        bool UnableUseStartDict() const;
-
-        bool UnableUseEndDict() const;
-
-        bool UnableUseStartArray() const;
-
-        bool UnableUseEndArray() const;
-
-        bool UnableUseBuild() const;
-
-        Builder& AddNode(const Node& node);
-
-        void PushNode(Node::Value value);
-
-    private:
-        Node root_ = nullptr;
-        std::stack<std::unique_ptr<Node>> nodes_;
+        KeyItemContext Key(std::string key) = delete;
+        Builder& EndDict() = delete;
     };
 
 }

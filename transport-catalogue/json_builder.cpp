@@ -1,190 +1,121 @@
-#include <stdexcept>
-#include <utility>
-#include <variant>
-
 #include "json_builder.h"
 
-namespace json {
+#include <utility>
 
-    using namespace std;
-    using namespace std::literals;
+using namespace json;
 
-    BuildConstructor::BuildConstructor(Builder& builder)
-        : builder_(builder) {}
+Builder::Builder() 
+{
+    nodes_stack_.emplace_back(&root_);
+}
 
-    BuildContextFirst::BuildContextFirst(Builder& builder)
-        : BuildConstructor(builder) {}
-
-    DictContext& BuildContextFirst::StartDict() {
-        return builder_.StartDict();
+KeyItemContext Builder::Key(std::string key) 
+{
+    if (!(!nodes_stack_.empty() && nodes_stack_.back()->IsDict())) 
+    {
+        throw std::logic_error("Key outside the dictionary");
     }
+    nodes_stack_.emplace_back(&const_cast<Dict&>(nodes_stack_.back()->AsDict())[key]);
+    return *this;
+}
 
-    ArrayContext& BuildContextFirst::StartArray() {
-        return builder_.StartArray();
+Builder& Builder::Value(Node value) {
+    if (nodes_stack_.empty() || (!nodes_stack_.back()->IsNull() && !nodes_stack_.back()->IsArray())) 
+    {
+        throw std::logic_error("Value error");
     }
-
-    BuildContextSecond::BuildContextSecond(Builder& builder)
-        : BuildConstructor(builder) {}
-
-    KeyContext& BuildContextSecond::Key(std::string key) {
-        return builder_.Key(key);
+    if (nodes_stack_.back()->IsArray()) 
+    {
+        const_cast<Array&>(nodes_stack_.back()->AsArray()).emplace_back(value);
     }
-
-    Builder& BuildContextSecond::EndDict() {
-        return builder_.EndDict();
+    else 
+    {
+        *nodes_stack_.back() = value;
+        nodes_stack_.pop_back();
     }
+    return *this;
+}
 
-    KeyContext::KeyContext(Builder& builder)
-        : BuildContextFirst(builder) {}
-
-    ValueKeyContext& KeyContext::Value(Node::Value value) {
-        return builder_.Value(value);
+DictItemContext Builder::StartDict() 
+{
+    if (nodes_stack_.empty() || (!nodes_stack_.back()->IsNull() && !nodes_stack_.back()->IsArray())) 
+    {
+        throw std::logic_error("StartDict error");
     }
+    InputResult(Dict());
+    return *this;
+}
 
-    ValueKeyContext::ValueKeyContext(Builder& builder)
-        : BuildContextSecond(builder) {}
-
-    ValueArrayContext::ValueArrayContext(Builder& builder)
-        : BuildContextFirst(builder) {}
-
-    ValueArrayContext& ValueArrayContext::Value(Node::Value value) {
-        return builder_.Value(value);
+ArrayItemContext Builder::StartArray() {
+    if (nodes_stack_.empty() || (!nodes_stack_.back()->IsNull() && !nodes_stack_.back()->IsArray())) 
+    {
+        throw std::logic_error("StartArray error");
     }
+    InputResult(Array());
+    return *this;
+}
 
-    Builder& ValueArrayContext::EndArray() {
-        return builder_.EndArray();
+Builder& Builder::EndDict() {
+    if (!(!nodes_stack_.empty() && nodes_stack_.back()->IsDict()))
+    {
+        throw std::logic_error("EndDict outside the dictionary");
     }
+    nodes_stack_.pop_back();
+    return *this;
+}
 
-    DictContext::DictContext(Builder& builder)
-        : BuildContextSecond(builder) {}
-
-    ArrayContext::ArrayContext(Builder& builder)
-        : ValueArrayContext(builder) {}
-
-    Builder::Builder()
-        : KeyContext(*this)
-        , ValueKeyContext(*this)
-        , DictContext(*this)
-        , ArrayContext(*this) {}
-
-    KeyContext& Builder::Key(string key) {
-        if (UnableUseKey()) {
-            throw logic_error("Key сan't be applied"s);
-        }
-        nodes_.push(make_unique<Node>(key));
-        return *this;
+Builder& Builder::EndArray() {
+    if (!(!nodes_stack_.empty() && nodes_stack_.back()->IsArray()))
+    {
+        throw std::logic_error("EndArray outside the array");
     }
+    nodes_stack_.pop_back();
+    return *this;
+}
 
-    Builder& Builder::Value(Node::Value value) {
-        if (UnableUseValue()) {
-            throw std::logic_error("Value сan't be applied"s);
-        }
-        PushNode(value);
-        return AddNode(*nodes_.top().release());
+Node Builder::Build() {
+    if (!nodes_stack_.empty()) {
+        throw std::logic_error("Object haven't build");
     }
+    return root_;
+}
 
-    DictContext& Builder::StartDict() {
-        if (UnableUseStartDict()) {
-            throw logic_error("StartDict сan't be applied"s);
-        }
-        nodes_.push(make_unique<Node>(Dict()));
-        return *this;
-    }
+KeyItemContext ItemContext::Key(std::string key) 
+{
+    return builder_.Key(std::move(key));
+}
 
-    Builder& Builder::EndDict() {
-        if (UnableUseEndDict()) {
-            throw logic_error("EndDict сan't be applied"s);
-        }
-        return AddNode(*nodes_.top().release());
-    }
+Builder& ItemContext::Value(Node value) 
+{
+    return builder_.Value(std::move(value));
+}
 
-    ArrayContext& Builder::StartArray() {
-        if (UnableUseStartArray()) {
-            throw logic_error("StartArray сan't be applied"s);
-        }
-        nodes_.push(make_unique<Node>(Array()));
-        return *this;
-    }
+DictItemContext ItemContext::StartDict() 
+{
+    return builder_.StartDict();
+}
 
-    Builder& Builder::EndArray() {
-        if (UnableUseEndArray()) {
-            throw logic_error("EndArray сan't be applied"s);
-        }
-        return AddNode(*nodes_.top().release());
-    }
+ArrayItemContext ItemContext::StartArray()
+{
+    return builder_.StartArray();
+}
 
-    Node Builder::Build() const {
-        if (UnableUseBuild()) {
-            throw logic_error("Builder сan't be applied"s);
-        }
-        return root_;
-    }
+Builder& ItemContext::EndDict() 
+{
+    return builder_.EndDict();
+}
 
-    bool Builder::UnableAdd() const {
-        return !(nodes_.empty()
-            || nodes_.top()->IsArray()
-            || nodes_.top()->IsString());
-    }
+Builder& ItemContext::EndArray() 
+{
+    return builder_.EndArray();
+}
 
-    bool Builder::IsMakeObj() const {
-        return !root_.IsNull();
-    }
+ValueContext KeyItemContext::Value(Node value) 
+{
+    return ItemContext::Value(std::move(value));
+}
 
-    bool Builder::UnableUseKey() const {
-        return IsMakeObj()
-            || nodes_.empty()
-            || !nodes_.top()->IsDict();
-    }
-
-    bool Builder::UnableUseValue() const {
-        return IsMakeObj()
-            || UnableAdd();
-    }
-
-    bool Builder::UnableUseStartDict() const {
-        return UnableUseValue();
-    }
-
-    bool Builder::UnableUseEndDict() const {
-        return IsMakeObj()
-            || nodes_.empty()
-            || !nodes_.top()->IsDict();
-    }
-
-    bool Builder::UnableUseStartArray() const {
-        return UnableUseValue();
-    }
-
-    bool Builder::UnableUseEndArray() const {
-        return IsMakeObj()
-            || nodes_.empty()
-            || !nodes_.top()->IsArray();
-    }
-
-    bool Builder::UnableUseBuild() const {
-        return !IsMakeObj();
-    }
-
-    Builder& Builder::AddNode(const Node& node) {
-        nodes_.pop();
-        if (nodes_.empty()) {
-            root_ = node;
-        }
-        else if (nodes_.top()->IsArray()) {
-            nodes_.top()->AsChangeableArray().push_back(node);
-        }
-        else {
-            Node& key = *nodes_.top().release();
-            nodes_.pop();
-            nodes_.top()->AsChangeableDict().emplace(key.AsString(), node);
-        }
-        return *this;
-    }
-
-    void Builder::PushNode(Node::Value value) {
-        visit([this](auto&& val) {
-            nodes_.push(make_unique<Node>(val));
-            }, value);
-    }
-
+ArrayItemContext json::ArrayItemContext::Value(Node value)
+{
+    return ItemContext::Value(std::move(value));
 }
