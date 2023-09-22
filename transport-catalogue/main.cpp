@@ -14,7 +14,6 @@ using namespace std::string_literals;
 
 int main()
 {
-
 	Catalogue::TransportCatalogue catalogue;
 	json::Document doc = json::Load(std::cin);
 
@@ -32,5 +31,4 @@ int main()
 	json::Document answer = json::ExecuteRequests(catalogue, doc.GetRoot().AsDict().at("stat_requests"), map_settings, projector);
 
 	json::Print(answer, std::cout);
-
 }
