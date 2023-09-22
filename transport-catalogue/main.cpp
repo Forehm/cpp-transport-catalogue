@@ -10,8 +10,6 @@
 using namespace std::string_literals;
 
 
-
-
 int main()
 {
 	Catalogue::TransportCatalogue catalogue;
