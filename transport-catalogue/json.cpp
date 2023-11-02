@@ -183,7 +183,7 @@ namespace json {
             try {
                 if (is_int) {
 
-                    try 
+                    try
                     {
                         return std::stoi(parsed_num);
                     }
@@ -336,7 +336,7 @@ namespace json {
                 node.GetValue());
         }
 
-    }  
+    }
 
     Document Load(std::istream& input) {
         return Document{ LoadNode(input) };

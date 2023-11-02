@@ -1,6 +1,6 @@
 #include "json.h"
 
-namespace json 
+namespace json
 {
     class ItemContext;
     class KeyItemContext;
@@ -8,7 +8,7 @@ namespace json
     class DictItemContext;
     class ArrayItemContext;
 
-    class Builder 
+    class Builder
     {
     public:
         Builder();
@@ -25,24 +25,24 @@ namespace json
         std::vector<Node*> nodes_stack_;
 
         template <typename T>
-        void InputResult(T elem) 
+        void InputResult(T elem)
         {
-            if (nodes_stack_.back()->IsArray()) 
+            if (nodes_stack_.back()->IsArray())
             {
                 const_cast<Array&>(nodes_stack_.back()->AsArray()).push_back(elem);
                 nodes_stack_.emplace_back(&const_cast<Array&>(nodes_stack_.back()->AsArray()).back());
             }
-            else 
+            else
             {
                 *nodes_stack_.back() = elem;
             }
         }
     };
 
-    class ItemContext 
+    class ItemContext
     {
     public:
-        ItemContext(Builder& builder) :builder_(builder) 
+        ItemContext(Builder& builder) :builder_(builder)
         {
         };
         KeyItemContext Key(std::string key);
@@ -55,10 +55,10 @@ namespace json
         Builder& builder_;
     };
 
-    class KeyItemContext :public ItemContext 
+    class KeyItemContext :public ItemContext
     {
     public:
-        KeyItemContext(Builder& builder) : ItemContext(builder) 
+        KeyItemContext(Builder& builder) : ItemContext(builder)
         {
         };
 
@@ -69,10 +69,10 @@ namespace json
         Builder& EndArray() = delete;
     };
 
-    class ValueContext :public ItemContext 
+    class ValueContext :public ItemContext
     {
     public:
-        ValueContext(Builder& builder) :ItemContext(builder) 
+        ValueContext(Builder& builder) :ItemContext(builder)
         {
         };
         Builder& Value(Node value) = delete;
@@ -81,10 +81,10 @@ namespace json
         Builder& EndArray() = delete;
     };
 
-    class DictItemContext :public ItemContext 
+    class DictItemContext :public ItemContext
     {
     public:
-        DictItemContext(Builder& builder) :ItemContext(builder) 
+        DictItemContext(Builder& builder) :ItemContext(builder)
         {
         };
         Builder& Value(Node value) = delete;
@@ -93,10 +93,10 @@ namespace json
         Builder& EndArray() = delete;
     };
 
-    class ArrayItemContext :public ItemContext 
+    class ArrayItemContext :public ItemContext
     {
     public:
-        ArrayItemContext(Builder& builder) :ItemContext(builder) 
+        ArrayItemContext(Builder& builder) :ItemContext(builder)
         {
         };
 

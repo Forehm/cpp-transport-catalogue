@@ -348,4 +348,4 @@ namespace shapes
         svg::Point head_center_;
         double head_radius_;
     };
-} 
+}

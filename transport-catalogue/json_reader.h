@@ -62,8 +62,10 @@ namespace json
 
 	void SetTransportCatalogue(Catalogue::TransportCatalogue& catalogue, const Node& base_requests);
 
+	void SetRoutingSettings(Catalogue::TransportCatalogue& catalogue, const Node& routing_settings);
+
 	Document ExecuteRequests(Catalogue::TransportCatalogue& catalogue, const Node& stat_requests, map_renderer::MapVisualSettings& settings,
-		map_renderer::SphereProjector& projector);
+		map_renderer::SphereProjector& projector, graph::DirectedWeightedGraph<Catalogue::RoadGraphWeight>& graph, graph::Router<Catalogue::RoadGraphWeight>& navigator);
 
 	void ParseBusJson(Catalogue::TransportCatalogue& catalogue, const Node& query);
 

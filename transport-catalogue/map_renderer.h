@@ -1,4 +1,4 @@
-#pragma once
+п»ї#pragma once
 #include <algorithm>
 #include <cstdlib>
 #include <iostream>
@@ -17,59 +17,59 @@ namespace map_renderer
 
     class SphereProjector {
     public:
-        // points_begin и points_end задают начало и конец интервала элементов geo::Coordinates
+        // points_begin ГЁ points_end Г§Г Г¤Г ГѕГІ Г­Г Г·Г Г«Г® ГЁ ГЄГ®Г­ГҐГ¶ ГЁГ­ГІГҐГ°ГўГ Г«Г  ГЅГ«ГҐГ¬ГҐГ­ГІГ®Гў geo::Coordinates
         template <typename PointInputIt>
         SphereProjector(PointInputIt points_begin, PointInputIt points_end,
             double max_width, double max_height, double padding)
             : padding_(padding) //
         {
-            // Если точки поверхности сферы не заданы, вычислять нечего
+            // Г…Г±Г«ГЁ ГІГ®Г·ГЄГЁ ГЇГ®ГўГҐГ°ГµГ­Г®Г±ГІГЁ Г±ГґГҐГ°Г» Г­ГҐ Г§Г Г¤Г Г­Г», ГўГ»Г·ГЁГ±Г«ГїГІГј Г­ГҐГ·ГҐГЈГ®
             if (points_begin == points_end) {
                 return;
             }
 
-            // Находим точки с минимальной и максимальной долготой
+            // ГЌГ ГµГ®Г¤ГЁГ¬ ГІГ®Г·ГЄГЁ Г± Г¬ГЁГ­ГЁГ¬Г Г«ГјГ­Г®Г© ГЁ Г¬Г ГЄГ±ГЁГ¬Г Г«ГјГ­Г®Г© Г¤Г®Г«ГЈГ®ГІГ®Г©
             const auto [left_it, right_it] = std::minmax_element(
                 points_begin, points_end,
                 [](auto lhs, auto rhs) { return lhs.lng < rhs.lng; });
             min_lon_ = left_it->lng;
             const double max_lon = right_it->lng;
 
-            // Находим точки с минимальной и максимальной широтой
+            // ГЌГ ГµГ®Г¤ГЁГ¬ ГІГ®Г·ГЄГЁ Г± Г¬ГЁГ­ГЁГ¬Г Г«ГјГ­Г®Г© ГЁ Г¬Г ГЄГ±ГЁГ¬Г Г«ГјГ­Г®Г© ГёГЁГ°Г®ГІГ®Г©
             const auto [bottom_it, top_it] = std::minmax_element(
                 points_begin, points_end,
                 [](auto lhs, auto rhs) { return lhs.lat < rhs.lat; });
             const double min_lat = bottom_it->lat;
             max_lat_ = top_it->lat;
 
-            // Вычисляем коэффициент масштабирования вдоль координаты x
+            // Г‚Г»Г·ГЁГ±Г«ГїГҐГ¬ ГЄГ®ГЅГґГґГЁГ¶ГЁГҐГ­ГІ Г¬Г Г±ГёГІГ ГЎГЁГ°Г®ГўГ Г­ГЁГї ГўГ¤Г®Г«Гј ГЄГ®Г®Г°Г¤ГЁГ­Г ГІГ» x
             std::optional<double> width_zoom;
             if (!(std::abs(max_lon - min_lon_) < EPSILON)) {
                 width_zoom = (max_width - 2 * padding) / (max_lon - min_lon_);
             }
 
-            // Вычисляем коэффициент масштабирования вдоль координаты y
+            // Г‚Г»Г·ГЁГ±Г«ГїГҐГ¬ ГЄГ®ГЅГґГґГЁГ¶ГЁГҐГ­ГІ Г¬Г Г±ГёГІГ ГЎГЁГ°Г®ГўГ Г­ГЁГї ГўГ¤Г®Г«Гј ГЄГ®Г®Г°Г¤ГЁГ­Г ГІГ» y
             std::optional<double> height_zoom;
             if (!(std::abs(max_lat_ - min_lat) < EPSILON)) {
                 height_zoom = (max_height - 2 * padding) / (max_lat_ - min_lat);
             }
 
             if (width_zoom && height_zoom) {
-                // Коэффициенты масштабирования по ширине и высоте ненулевые,
-                // берём минимальный из них
+                // ГЉГ®ГЅГґГґГЁГ¶ГЁГҐГ­ГІГ» Г¬Г Г±ГёГІГ ГЎГЁГ°Г®ГўГ Г­ГЁГї ГЇГ® ГёГЁГ°ГЁГ­ГҐ ГЁ ГўГ»Г±Г®ГІГҐ Г­ГҐГ­ГіГ«ГҐГўГ»ГҐ,
+                // ГЎГҐГ°ВёГ¬ Г¬ГЁГ­ГЁГ¬Г Г«ГјГ­Г»Г© ГЁГ§ Г­ГЁГµ
                 zoom_coeff_ = std::min(*width_zoom, *height_zoom);
             }
             else if (width_zoom) {
-                // Коэффициент масштабирования по ширине ненулевой, используем его
+                // ГЉГ®ГЅГґГґГЁГ¶ГЁГҐГ­ГІ Г¬Г Г±ГёГІГ ГЎГЁГ°Г®ГўГ Г­ГЁГї ГЇГ® ГёГЁГ°ГЁГ­ГҐ Г­ГҐГ­ГіГ«ГҐГўГ®Г©, ГЁГ±ГЇГ®Г«ГјГ§ГіГҐГ¬ ГҐГЈГ®
                 zoom_coeff_ = *width_zoom;
             }
             else if (height_zoom) {
-                // Коэффициент масштабирования по высоте ненулевой, используем его
+                // ГЉГ®ГЅГґГґГЁГ¶ГЁГҐГ­ГІ Г¬Г Г±ГёГІГ ГЎГЁГ°Г®ГўГ Г­ГЁГї ГЇГ® ГўГ»Г±Г®ГІГҐ Г­ГҐГ­ГіГ«ГҐГўГ®Г©, ГЁГ±ГЇГ®Г«ГјГ§ГіГҐГ¬ ГҐГЈГ®
                 zoom_coeff_ = *height_zoom;
             }
         }
 
-        // Проецирует широту и долготу в координаты внутри SVG-изображения
+        // ГЏГ°Г®ГҐГ¶ГЁГ°ГіГҐГІ ГёГЁГ°Г®ГІГі ГЁ Г¤Г®Г«ГЈГ®ГІГі Гў ГЄГ®Г®Г°Г¤ГЁГ­Г ГІГ» ГўГ­ГіГІГ°ГЁ SVG-ГЁГ§Г®ГЎГ°Г Г¦ГҐГ­ГЁГї
         svg::Point operator()(geo::Coordinates coords) const {
             return {
                 (coords.lng - min_lon_) * zoom_coeff_ + padding_,

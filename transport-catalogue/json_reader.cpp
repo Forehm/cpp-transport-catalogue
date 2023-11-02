@@ -140,6 +140,13 @@ void json::SetTransportCatalogue(Catalogue::TransportCatalogue& catalogue, const
 
 }
 
+void json::SetRoutingSettings(Catalogue::TransportCatalogue& catalogue, const Node& routing_settings)
+{
+	const double wait_time = routing_settings.AsDict().at("bus_wait_time").AsDouble();
+	const double velocity = routing_settings.AsDict().at("bus_velocity").AsDouble();
+	catalogue.SetBusRoutingSettings(wait_time, velocity);
+}
+
 json::Dict ExecuteStopRequest(Catalogue::TransportCatalogue& catalogue, const json::Node& request)
 {
 	json::Builder answer;
@@ -180,7 +187,7 @@ json::Dict ExecuteBusRequest(Catalogue::TransportCatalogue& catalogue, const jso
 	else
 	{
 		Catalogue::Detail::BusObject bus_object = catalogue.GetBusInfo(request.AsDict().at("name").AsString());
-		
+
 		answer.Key("curvature"s).Value(bus_object.curvature);
 		answer.Key("request_id"s).Value(request.AsDict().at("id"s).AsInt());
 		answer.Key("route_length"s).Value(bus_object.route_length);
@@ -189,13 +196,14 @@ json::Dict ExecuteBusRequest(Catalogue::TransportCatalogue& catalogue, const jso
 		answer.EndDict();
 		return answer.Build().AsDict();
 	}
-	 
+
 }
 
 json::Dict ExecuteMapRequest(Catalogue::TransportCatalogue& catalogue, const json::Node& request,
 	map_renderer::MapVisualSettings& settings, map_renderer::SphereProjector& projector)
 {
 	json::Builder answer;
+	
 	answer.StartDict();
 	answer.Key("request_id"s).Value(request.AsDict().at("id").AsInt());
 
@@ -212,10 +220,67 @@ json::Dict ExecuteMapRequest(Catalogue::TransportCatalogue& catalogue, const jso
 	return answer.Build().AsDict();
 }
 
-json::Document json::ExecuteRequests(Catalogue::TransportCatalogue& catalogue, const Node& stat_requests,
-	map_renderer::MapVisualSettings& settings, map_renderer::SphereProjector& projector)
+json::Dict ExecuteRouteRequest(Catalogue::TransportCatalogue& catalogue, const json::Node& request, graph::DirectedWeightedGraph<Catalogue::RoadGraphWeight>& graph, 
+	graph::Router<Catalogue::RoadGraphWeight>& navigator)
 {
+	json::Builder answer;
 	
+	answer.StartDict();
+
+	int request_id = request.AsDict().at("id").AsInt();
+	std::string from_name = request.AsDict().at("from").AsString();
+	std::string to_name = request.AsDict().at("to").AsString();
+
+	auto ids_from = catalogue.GetStopIdForRouter(from_name);
+	auto ids_to = catalogue.GetStopIdForRouter(to_name);
+
+	auto info = navigator.BuildRoute(ids_from.first, ids_to.first);
+	
+	if (info.has_value())
+	{
+		double total_time = info->weight.time;
+		answer.Key("items"s).StartArray();
+
+		for (const auto edge : info.value().edges)
+		{
+			graph::Edge<Catalogue::RoadGraphWeight> edge_info = graph.GetEdge(edge);
+			Catalogue::DistancesMetaInfo meta_info = catalogue.GetRouteMetaInfo({ edge_info.from, edge_info.to });
+			std::pair<std::string, std::string> names = catalogue.GetStopNamesByMetaIDS(edge_info.from, edge_info.to);
+			answer.StartDict();
+			answer.Key("type"s).Value(meta_info.type);
+			if (meta_info.type == "Wait"s)
+			{
+				answer.Key("stop_name"s).Value(meta_info.name);
+			}
+			else
+			{
+				answer.Key("bus"s).Value(meta_info.name);
+				answer.Key("span_count"s).Value((int)edge_info.weight.span_count);
+			}
+			answer.Key("time"s).Value(edge_info.weight.time);
+			answer.EndDict();
+		}  
+		answer.EndArray();
+		answer.Key("request_id"s).Value(request_id);
+		answer.Key("total_time"s).Value(total_time);
+		answer.EndDict();
+	}
+	else
+	{
+		answer.Key("request_id"s).Value(request_id);
+		answer.Key("error_message"s).Value("not found"s);
+		answer.EndDict();
+	}
+	
+	
+	return answer.Build().AsDict();
+}
+
+json::Document json::ExecuteRequests(Catalogue::TransportCatalogue& catalogue, const Node& stat_requests,
+	map_renderer::MapVisualSettings& settings, map_renderer::SphereProjector& projector, graph::DirectedWeightedGraph<Catalogue::RoadGraphWeight>& graph, 
+	graph::Router<Catalogue::RoadGraphWeight>& navigator)
+{
+
 	json::Builder result;
 	result.StartArray();
 
@@ -232,6 +297,10 @@ json::Document json::ExecuteRequests(Catalogue::TransportCatalogue& catalogue, c
 		if (request.AsDict().at("type").AsString() == "Map")
 		{
 			result.Value(ExecuteMapRequest(catalogue, request, settings, projector));
+		}
+		if (request.AsDict().at("type").AsString() == "Route")
+		{
+			result.Value(ExecuteRouteRequest(catalogue, request, graph, navigator));
 		}
 	}
 	result.EndArray();

@@ -38,6 +38,12 @@ namespace Catalogue
 
 	}
 
+	void TransportCatalogue::SetBusRoutingSettings(const double wait_time, const double velocity)
+	{
+		bus_routing_settings_.bus_wait_time = wait_time;
+		bus_routing_settings_.bus_velocity = velocity;
+	}
+
 	bool TransportCatalogue::FindBus(const std::string_view name) const
 	{
 		auto it = std::find_if(all_buses_.begin(), all_buses_.end(), [&name](const std::string& bus)
@@ -46,6 +52,84 @@ namespace Catalogue
 			});
 		return it != all_buses_.end();
 	}
+
+	void TransportCatalogue::FillGraph(graph::DirectedWeightedGraph<Catalogue::RoadGraphWeight>& graph)
+	{
+		size_t counter = 0;
+		
+		for (const BusStop& stop : stops_)
+		{
+			graph::Edge<RoadGraphWeight> edge;
+			edge.from = counter;
+			edge.to = counter + 1;
+			edge.weight.time = bus_routing_settings_.bus_wait_time;
+			edge.weight.span_count = 0;
+			stops_meta_info_[stop.name] = { counter, counter + 1 };
+			size_t id_from = stops_meta_info_[stop.name].first;
+			size_t id_to = stops_meta_info_[stop.name].second;
+
+			DistancesMetaInfo stops_info;
+			stops_info.name = stop.name;
+			stops_info.spans_count = 0;
+			stops_info.type = "Wait"s;
+			stops_info.weight = bus_routing_settings_.bus_wait_time;
+			stop_distances_meta_info_[{id_from, id_to}] = { stops_info };
+			graph.AddEdge(edge);
+			counter += 2;
+		}
+
+		for (const auto& [bus, stops] : route_indexes_)
+		{
+			for (size_t i = 0; i < stops.size() - 1; ++i)
+			{
+				for (size_t j = i + 1; j < stops.size(); ++j)
+				{
+					graph::Edge<RoadGraphWeight> edge;
+					edge.from = stops_meta_info_[stops[i]->name].second;
+					edge.to = stops_meta_info_[stops[j]->name].first;
+					double time = 0.0;
+					double speedMetersPerSecond = (bus_routing_settings_.bus_velocity * 1000.0) / 3600.0;
+					double distance = 0.0;
+					
+					size_t span_count = (j - i);
+
+					for (size_t _i = i; _i < j; ++_i)
+					{
+						if (distance_between_stops_.count({ stops[_i], stops[_i + 1] }))
+						{
+							distance = distance_between_stops_.at({ stops[_i], stops[_i + 1] });
+							time += distance / speedMetersPerSecond;
+						}
+						else
+						{
+							distance = geo::ComputeDistance(stops[_i]->coordinates, stops[_i + 1]->coordinates);
+							time += distance / speedMetersPerSecond;
+						}
+					}
+					time /= 60.0;
+
+					DistancesMetaInfo bus_route_info;
+					bus_route_info.name = bus;
+					bus_route_info.spans_count = span_count;
+					bus_route_info.type = "Bus"s;
+					bus_route_info.weight = time;
+					bus_route_info.from = stops[i]->name;
+					bus_route_info.to = stops[j]->name;
+
+					stop_distances_meta_info_[{edge.from, edge.to}] = { bus_route_info };
+
+					edge.weight.time = time;
+					edge.weight.span_count = span_count;
+					graph.AddEdge(edge);
+				}
+			}
+			
+		}
+	
+	}
+
+
+
 
 	Detail::BusObject TransportCatalogue::GetBusInfo(const std::string_view bus_name) const
 	{
@@ -185,5 +269,45 @@ namespace Catalogue
 	{
 		return bus_stop_indexes_;
 	}
+
+	size_t TransportCatalogue::GetStopsCount() const
+	{
+		return stops_.size();
+	}
+
+	std::pair<size_t, size_t> TransportCatalogue::GetStopIdForRouter(const std::string& stop_name) const
+	{
+		return stops_meta_info_.at(stop_name);
+	}
+
+	double TransportCatalogue::GetBusVelocity() const
+	{
+		return bus_routing_settings_.bus_velocity;
+	}
+
+	DistancesMetaInfo TransportCatalogue::GetRouteMetaInfo(const std::pair<size_t, size_t> ids) const
+	{
+		return stop_distances_meta_info_.at(ids);
+	}
+
+	double TransportCatalogue::getBusWaitTime() const
+	{
+		return bus_routing_settings_.bus_wait_time;
+	}
+
+	std::pair<std::string, std::string> TransportCatalogue::GetStopNamesByMetaIDS(const size_t first, const size_t second) const
+	{
+		std::pair<std::string, std::string> names;
+
+		names.first = stop_distances_meta_info_.at({ first, second }).from;
+		names.second = stop_distances_meta_info_.at({ first, second }).to;
+
+		return names;
+	}
+
+	
+	
+
+	
 
 }

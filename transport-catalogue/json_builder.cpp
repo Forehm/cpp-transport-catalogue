@@ -4,14 +4,14 @@
 
 using namespace json;
 
-Builder::Builder() 
+Builder::Builder()
 {
     nodes_stack_.emplace_back(&root_);
 }
 
-KeyItemContext Builder::Key(std::string key) 
+KeyItemContext Builder::Key(std::string key)
 {
-    if (!(!nodes_stack_.empty() && nodes_stack_.back()->IsDict())) 
+    if (!(!nodes_stack_.empty() && nodes_stack_.back()->IsDict()))
     {
         throw std::logic_error("Key outside the dictionary");
     }
@@ -20,15 +20,15 @@ KeyItemContext Builder::Key(std::string key)
 }
 
 Builder& Builder::Value(Node value) {
-    if (nodes_stack_.empty() || (!nodes_stack_.back()->IsNull() && !nodes_stack_.back()->IsArray())) 
+    if (nodes_stack_.empty() || (!nodes_stack_.back()->IsNull() && !nodes_stack_.back()->IsArray()))
     {
         throw std::logic_error("Value error");
     }
-    if (nodes_stack_.back()->IsArray()) 
+    if (nodes_stack_.back()->IsArray())
     {
         const_cast<Array&>(nodes_stack_.back()->AsArray()).emplace_back(value);
     }
-    else 
+    else
     {
         *nodes_stack_.back() = value;
         nodes_stack_.pop_back();
@@ -36,9 +36,9 @@ Builder& Builder::Value(Node value) {
     return *this;
 }
 
-DictItemContext Builder::StartDict() 
+DictItemContext Builder::StartDict()
 {
-    if (nodes_stack_.empty() || (!nodes_stack_.back()->IsNull() && !nodes_stack_.back()->IsArray())) 
+    if (nodes_stack_.empty() || (!nodes_stack_.back()->IsNull() && !nodes_stack_.back()->IsArray()))
     {
         throw std::logic_error("StartDict error");
     }
@@ -47,7 +47,7 @@ DictItemContext Builder::StartDict()
 }
 
 ArrayItemContext Builder::StartArray() {
-    if (nodes_stack_.empty() || (!nodes_stack_.back()->IsNull() && !nodes_stack_.back()->IsArray())) 
+    if (nodes_stack_.empty() || (!nodes_stack_.back()->IsNull() && !nodes_stack_.back()->IsArray()))
     {
         throw std::logic_error("StartArray error");
     }
@@ -80,17 +80,17 @@ Node Builder::Build() {
     return root_;
 }
 
-KeyItemContext ItemContext::Key(std::string key) 
+KeyItemContext ItemContext::Key(std::string key)
 {
     return builder_.Key(std::move(key));
 }
 
-Builder& ItemContext::Value(Node value) 
+Builder& ItemContext::Value(Node value)
 {
     return builder_.Value(std::move(value));
 }
 
-DictItemContext ItemContext::StartDict() 
+DictItemContext ItemContext::StartDict()
 {
     return builder_.StartDict();
 }
@@ -100,17 +100,17 @@ ArrayItemContext ItemContext::StartArray()
     return builder_.StartArray();
 }
 
-Builder& ItemContext::EndDict() 
+Builder& ItemContext::EndDict()
 {
     return builder_.EndDict();
 }
 
-Builder& ItemContext::EndArray() 
+Builder& ItemContext::EndArray()
 {
     return builder_.EndArray();
 }
 
-ValueContext KeyItemContext::Value(Node value) 
+ValueContext KeyItemContext::Value(Node value)
 {
     return ItemContext::Value(std::move(value));
 }

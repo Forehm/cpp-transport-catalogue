@@ -17,7 +17,7 @@ map_renderer::SphereProjector map_renderer::MakeProjector(Catalogue::TransportCa
 			coordinates_vector.push_back(stop->coordinates);
 		}
 	}
-	return map_renderer::SphereProjector{coordinates_vector.begin(), coordinates_vector.end(), width, height, padding};
+	return map_renderer::SphereProjector{ coordinates_vector.begin(), coordinates_vector.end(), width, height, padding };
 }
 
 map_renderer::MapRenderer::MapRenderer(const MapVisualSettings& settings, const SphereProjector& projector) : projector_(projector)
