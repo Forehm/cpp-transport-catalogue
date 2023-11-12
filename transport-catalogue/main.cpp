@@ -5,6 +5,7 @@
 #include "transport_catalogue.h"
 #include "json_reader.h"
 #include "map_renderer.h"
+#include "transport_router.h"
 #include <sstream>
 
 using namespace std::string_literals;
@@ -24,11 +25,10 @@ int main()
 	json::SetMapVisualSettings(map_settings, doc.GetRoot().AsDict().at("render_settings"));
 	map_renderer::SphereProjector projector = map_renderer::MakeProjector(catalogue, map_settings.width, map_settings.height, map_settings.padding);
 
-	graph::DirectedWeightedGraph<Catalogue::RoadGraphWeight> graph(catalogue.GetStopsCount() * 2);
-	catalogue.FillGraph(graph);
-	graph::Router<Catalogue::RoadGraphWeight> navigator(graph);
+	TransportRouter transport_navigator(catalogue);
 
 
-	json::Document answer = json::ExecuteRequests(catalogue, doc.GetRoot().AsDict().at("stat_requests"), map_settings, projector, graph, navigator);
+
+	json::Document answer = json::ExecuteRequests(catalogue, doc.GetRoot().AsDict().at("stat_requests"), map_settings, projector, transport_navigator);
 	json::Print(answer, std::cout);
 }

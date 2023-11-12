@@ -3,7 +3,7 @@
 #include "json.h"
 #include "map_renderer.h"
 #include "json_builder.h"
-
+#include "transport_router.h"
 
 
 namespace RequestQueue
@@ -65,7 +65,7 @@ namespace json
 	void SetRoutingSettings(Catalogue::TransportCatalogue& catalogue, const Node& routing_settings);
 
 	Document ExecuteRequests(Catalogue::TransportCatalogue& catalogue, const Node& stat_requests, map_renderer::MapVisualSettings& settings,
-		map_renderer::SphereProjector& projector, graph::DirectedWeightedGraph<Catalogue::RoadGraphWeight>& graph, graph::Router<Catalogue::RoadGraphWeight>& navigator);
+		map_renderer::SphereProjector& projector, const TransportRouter& navigator);
 
 	void ParseBusJson(Catalogue::TransportCatalogue& catalogue, const Node& query);
 

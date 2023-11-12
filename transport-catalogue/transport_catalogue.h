@@ -66,15 +66,14 @@ namespace Catalogue
 		Detail::BusObject GetBusInfo(const std::string_view bus_name) const;
 		Detail::StopObject GetStopInfo(const std::string_view stop_name) const;
 		const std::set<std::string_view> GetBusesList() const;
-		std::vector<BusStop*> GetBusStops(const std::string bus_name);
+		std::vector<BusStop*> GetBusStops(const std::string bus_name) const;
 		std::string GetLastStopToBus(const std::string bus_name);
 		std::unordered_map<std::string_view, const BusStop*> GetBuses();
 		size_t GetStopsCount() const;
-		std::pair<size_t, size_t> GetStopIdForRouter(const std::string& stop_name) const;
-		DistancesMetaInfo GetRouteMetaInfo(const std::pair<size_t, size_t> ids) const;
-		std::pair<std::string, std::string> GetStopNamesByMetaIDS(const size_t first, const size_t second) const;
+		std::deque<BusStop> GetAllStops() const;
 		double GetBusVelocity() const;
 		double getBusWaitTime() const;
+		double GetDistanceBetweenStops(const BusStop* from, const BusStop* to) const;
 
 		void SetStopsDistances(const std::string_view stop_name, const std::pair<std::string, size_t>& distances);
 		void SetBusDistancesArchive();
@@ -88,12 +87,7 @@ namespace Catalogue
 		bool FindStop(const std::string& name) const;
 		bool FindBus(const std::string_view name) const;
 
-		void FillGraph(graph::DirectedWeightedGraph<Catalogue::RoadGraphWeight>& graph);
-
 	private:
-		
-		std::map<std::string, std::pair<size_t, size_t>> stops_meta_info_;
-		std::map<std::pair<size_t, size_t>, DistancesMetaInfo> stop_distances_meta_info_;
 		
 		BusRoutingSettings bus_routing_settings_;
 		std::map<std::string, std::string> last_stop_to_buses_;

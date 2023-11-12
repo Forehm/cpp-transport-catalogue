@@ -220,8 +220,7 @@ json::Dict ExecuteMapRequest(Catalogue::TransportCatalogue& catalogue, const jso
 	return answer.Build().AsDict();
 }
 
-json::Dict ExecuteRouteRequest(Catalogue::TransportCatalogue& catalogue, const json::Node& request, graph::DirectedWeightedGraph<Catalogue::RoadGraphWeight>& graph, 
-	graph::Router<Catalogue::RoadGraphWeight>& navigator)
+json::Dict ExecuteRouteRequest(const json::Node& request, const TransportRouter& navigator)
 {
 	json::Builder answer;
 	
@@ -231,8 +230,8 @@ json::Dict ExecuteRouteRequest(Catalogue::TransportCatalogue& catalogue, const j
 	std::string from_name = request.AsDict().at("from").AsString();
 	std::string to_name = request.AsDict().at("to").AsString();
 
-	auto ids_from = catalogue.GetStopIdForRouter(from_name);
-	auto ids_to = catalogue.GetStopIdForRouter(to_name);
+	auto ids_from = navigator.GetStopIdForRouter(from_name);
+	auto ids_to = navigator.GetStopIdForRouter(to_name);
 
 	auto info = navigator.BuildRoute(ids_from.first, ids_to.first);
 	
@@ -243,9 +242,9 @@ json::Dict ExecuteRouteRequest(Catalogue::TransportCatalogue& catalogue, const j
 
 		for (const auto edge : info.value().edges)
 		{
-			graph::Edge<Catalogue::RoadGraphWeight> edge_info = graph.GetEdge(edge);
-			Catalogue::DistancesMetaInfo meta_info = catalogue.GetRouteMetaInfo({ edge_info.from, edge_info.to });
-			std::pair<std::string, std::string> names = catalogue.GetStopNamesByMetaIDS(edge_info.from, edge_info.to);
+			graph::Edge<Catalogue::RoadGraphWeight> edge_info = navigator.GetEdge(edge);
+			Catalogue::DistancesMetaInfo meta_info = navigator.GetRouteMetaInfo({ edge_info.from, edge_info.to });
+			std::pair<std::string, std::string> names = navigator.GetStopNamesByMetaIDS(edge_info.from, edge_info.to);
 			answer.StartDict();
 			answer.Key("type"s).Value(meta_info.type);
 			if (meta_info.type == "Wait"s)
@@ -277,8 +276,7 @@ json::Dict ExecuteRouteRequest(Catalogue::TransportCatalogue& catalogue, const j
 }
 
 json::Document json::ExecuteRequests(Catalogue::TransportCatalogue& catalogue, const Node& stat_requests,
-	map_renderer::MapVisualSettings& settings, map_renderer::SphereProjector& projector, graph::DirectedWeightedGraph<Catalogue::RoadGraphWeight>& graph, 
-	graph::Router<Catalogue::RoadGraphWeight>& navigator)
+	map_renderer::MapVisualSettings& settings, map_renderer::SphereProjector& projector, const TransportRouter& navigator)
 {
 
 	json::Builder result;
@@ -300,7 +298,7 @@ json::Document json::ExecuteRequests(Catalogue::TransportCatalogue& catalogue, c
 		}
 		if (request.AsDict().at("type").AsString() == "Route")
 		{
-			result.Value(ExecuteRouteRequest(catalogue, request, graph, navigator));
+			result.Value(ExecuteRouteRequest(request, navigator));
 		}
 	}
 	result.EndArray();
