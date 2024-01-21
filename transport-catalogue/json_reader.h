@@ -1,77 +1,40 @@
 #pragma once
-#include "transport_catalogue.h"
+
 #include "json.h"
+#include "transport_catalogue.h"
 #include "map_renderer.h"
-#include "json_builder.h"
-#include "transport_router.h"
+#include "request_handler.h"
 
+#include <iostream>
 
-namespace RequestQueue
-{
-	void CheckBusRequestQueue(Catalogue::TransportCatalogue& catalogue);
+class JsonReader {
+public:
+    JsonReader(std::istream& input)
+        : input_(json::Load(input))
+    {}
 
-	void CheckStopRequestQueue(Catalogue::TransportCatalogue& catalogue);
+    const json::Node& GetBaseRequests() const;
+    const json::Node& GetStatRequests() const;
+    const json::Node& GetRenderSettings() const;
+    const json::Node& GetRoutingSettings() const;
+    const json::Node& GetSerializationSettings() const;
 
-	void PerformRequestQueue(Catalogue::TransportCatalogue& cataloque);
+    void ProcessRequests(const json::Node& stat_requests, RequestHandler& rh) const;
 
-	class BusRequestsQueueManager
-	{
-	public:
-		void AddBusRequest(std::vector<std::string> request);
+    void FillCatalogue(transport::Catalogue& catalogue);
+    renderer::MapRenderer FillRenderSettings(const json::Node& settings) const;
+    transport::Router FillRoutingSettings(const json::Node& settings) const;
 
-		size_t GetBusRequestQueueSize();
+    const json::Node PrintRoute(const json::Dict& request_map, RequestHandler& rh) const;
+    const json::Node PrintStop(const json::Dict& request_map, RequestHandler& rh) const;
+    const json::Node PrintMap(const json::Dict& request_map, RequestHandler& rh) const;
+    const json::Node PrintRouting(const json::Dict& request_map, RequestHandler& rh) const;
 
-		std::vector<std::vector<std::string>>::iterator begin();
+private:
+    json::Document input_;
+    json::Node dummy_ = nullptr;
 
-		std::vector<std::vector<std::string>>::iterator end();
-
-		void Clear();
-
-	private:
-		std::vector<std::vector<std::string>> bus_request_queue_;
-
-	};
-
-	class StopRequestsQueueManager
-	{
-	public:
-
-		void AddStopRequest(const std::string& stop_name, const std::vector<std::pair<std::string, size_t>>& distances);
-
-		size_t GetStopRequestQueueSize();
-
-		std::map<std::string, std::pair<std::string, size_t>>::iterator begin();
-
-		std::map<std::string, std::pair<std::string, size_t>>::iterator end();
-
-		void Clear();
-
-	private:
-		std::multimap<std::string, std::pair<std::string, size_t>> stop_request_queue_;
-	};
-
-	bool IsBusReadyToAdd(const std::vector<std::string>& stops,
-		const Catalogue::TransportCatalogue& catalogue);
-}
-
-
-
-namespace json
-{
-
-
-	void SetTransportCatalogue(Catalogue::TransportCatalogue& catalogue, const Node& base_requests);
-
-	void SetRoutingSettings(Catalogue::TransportCatalogue& catalogue, const Node& routing_settings);
-
-	Document ExecuteRequests(Catalogue::TransportCatalogue& catalogue, const Node& stat_requests, map_renderer::MapVisualSettings& settings,
-		map_renderer::SphereProjector& projector, const TransportRouter& navigator);
-
-	void ParseBusJson(Catalogue::TransportCatalogue& catalogue, const Node& query);
-
-	void ParseStopJson(Catalogue::TransportCatalogue& catalogue, const Node& query);
-
-	void SetMapVisualSettings(map_renderer::MapVisualSettings& map_settings, const Node& doc);
-
-
-}
+    std::tuple<std::string_view, geo::Coordinates, std::map<std::string_view, int>> FillStop(const json::Dict& request_map) const;
+    void FillStopDistances(transport::Catalogue& catalogue) const;
+    std::tuple<std::string_view, std::vector<const transport::Stop*>, bool> FillRoute(const json::Dict& request_map, transport::Catalogue& catalogue) const;
+};

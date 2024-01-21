@@ -1,32 +1,50 @@
 #pragma once
-#include <memory>
-#include "graph.h"
-#include "transport_catalogue.h"
+
 #include "router.h"
+#include "transport_catalogue.h"
 
+#include <memory>
 
+namespace transport {
 
-
-
-class TransportRouter
-{
+class Router {
 public:
-	TransportRouter(const Catalogue::TransportCatalogue& catalogue);
+    //Router() = default;
 
-	void FillGraph();
+    Router(const int bus_wait_time, const double bus_velocity)
+        : bus_wait_time_(bus_wait_time)
+        , bus_velocity_(bus_velocity) {}
 
-	std::pair<size_t, size_t> GetStopIdForRouter(const std::string& stop_name) const;
-	Catalogue::DistancesMetaInfo GetRouteMetaInfo(const std::pair<size_t, size_t> ids) const;
-	std::pair<std::string, std::string> GetStopNamesByMetaIDS(const size_t first, const size_t second) const;
-	std::optional<graph::Router<Catalogue::RoadGraphWeight>::RouteInfo> BuildRoute(const size_t from, const size_t to) const;
-	const graph::Edge<Catalogue::RoadGraphWeight>& GetEdge(const size_t edge_id) const;
+    Router(const Router& settings, const Catalogue& catalogue) {
+        bus_wait_time_ = settings.bus_wait_time_;
+        bus_velocity_ = settings.bus_velocity_;
+        BuildGraph(catalogue);
+    }
+    
+    Router(const Router& settings, graph::DirectedWeightedGraph<double> graph, std::map<std::string, graph::VertexId> stop_ids)
+        : bus_wait_time_(settings.bus_wait_time_)
+        , bus_velocity_(settings.bus_velocity_)
+        , graph_(graph)
+        , stop_ids_(stop_ids) {
+           router_ = std::make_unique<graph::Router<double>>(graph_);
+       }
+    
+    const graph::DirectedWeightedGraph<double>& BuildGraph(const Catalogue& catalogue);
+    const std::optional<graph::Router<double>::RouteInfo> FindRoute(const std::string_view stop_from, const std::string_view stop_to) const;
+    const graph::DirectedWeightedGraph<double>& GetGraph() const;
+    void SetGraph(const graph::DirectedWeightedGraph<double> graph, const std::map<std::string, graph::VertexId> stop_ids);
+    const int GetBusWaitTime() const;
+    const double GetBusVelocity() const;
+    const Router GetRouterSettings() const;
+    const std::map<std::string, graph::VertexId> GetStopIds() const;
 
 private:
-	std::shared_ptr<graph::DirectedWeightedGraph<Catalogue::RoadGraphWeight>> graph_;
-	std::shared_ptr<graph::Router<Catalogue::RoadGraphWeight>> router_;
-	const Catalogue::TransportCatalogue& catalogue_;
-	std::map<std::string, std::pair<size_t, size_t>> stops_meta_info_;
-	std::map<std::pair<size_t, size_t>, Catalogue::DistancesMetaInfo> stop_distances_meta_info_;
+    int bus_wait_time_ = 0;
+    double bus_velocity_ = 0.0;
+
+    graph::DirectedWeightedGraph<double> graph_;
+    std::map<std::string, graph::VertexId> stop_ids_;
+    std::unique_ptr<graph::Router<double>> router_;
 };
 
-
+} // namespace transport

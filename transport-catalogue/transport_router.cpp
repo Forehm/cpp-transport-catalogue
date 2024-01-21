@@ -1,108 +1,95 @@
 #include "transport_router.h"
 
-TransportRouter::TransportRouter(const Catalogue::TransportCatalogue& catalogue) : catalogue_(catalogue)
-{
-	graph_ = std::make_shared<graph::DirectedWeightedGraph<Catalogue::RoadGraphWeight>>(catalogue.GetStopsCount() * 2);
-	FillGraph();
-	const graph::DirectedWeightedGraph<Catalogue::RoadGraphWeight>* constGraph = graph_.get();
-	router_ = std::make_shared<graph::Router<Catalogue::RoadGraphWeight>>(*constGraph);
+namespace transport {
+
+const graph::DirectedWeightedGraph<double>& Router::BuildGraph(const Catalogue& catalogue) {
+    const auto& all_stops = catalogue.GetSortedAllStops();
+    const auto& all_buses = catalogue.GetSortedAllBuses();
+    graph::DirectedWeightedGraph<double> stops_graph(all_stops.size() * 2);
+    std::map<std::string, graph::VertexId> stop_ids;
+    graph::VertexId vertex_id = 0;
+
+    for (const auto& [stop_name, stop_info] : all_stops) {
+        stop_ids[stop_info->name] = vertex_id;
+        stops_graph.AddEdge({
+                stop_info->name,
+                0,
+                vertex_id,
+                ++vertex_id,
+                static_cast<double>(bus_wait_time_)
+            });
+        ++vertex_id;
+    }
+    stop_ids_ = std::move(stop_ids);
+
+    for_each(
+        all_buses.begin(),
+        all_buses.end(),
+        [&stops_graph, this, &catalogue](const auto& item) {
+            const auto& bus_info = item.second;
+            const auto& stops = bus_info->stops;
+            size_t stops_count = stops.size();
+            for (size_t i = 0; i < stops_count; ++i) {
+                for (size_t j = i + 1; j < stops_count; ++j) {
+                    const Stop* stop_from = stops[i];
+                    const Stop* stop_to = stops[j];
+                    int dist_sum = 0;
+                    int dist_sum_inverse = 0;
+                    for (size_t k = i + 1; k <= j; ++k) {
+                        dist_sum += catalogue.GetDistance(stops[k - 1], stops[k]);
+                        dist_sum_inverse += catalogue.GetDistance(stops[k], stops[k - 1]);
+                    }
+                    stops_graph.AddEdge({ bus_info->number,
+                                          j - i,
+                                          stop_ids_.at(stop_from->name) + 1,
+                                          stop_ids_.at(stop_to->name),
+                                          static_cast<double>(dist_sum) / (bus_velocity_ * (100.0 / 6.0))});
+
+                    if (!bus_info->is_circle) {
+                        stops_graph.AddEdge({ bus_info->number,
+                                              j - i,
+                                              stop_ids_.at(stop_to->name) + 1,
+                                              stop_ids_.at(stop_from->name),
+                                              static_cast<double>(dist_sum_inverse) / (bus_velocity_ * (100.0 / 6.0))});
+                    }
+                }
+            }
+        });
+
+    graph_ = std::move(stops_graph);
+    router_ = std::make_unique<graph::Router<double>>(graph_);
+
+    return graph_;
 }
 
-void TransportRouter::FillGraph()
-{
-	size_t counter = 0;
-
-	for (const auto stop : catalogue_.GetAllStops())
-	{
-		graph::Edge<Catalogue::RoadGraphWeight> edge;
-		edge.from = counter;
-		edge.to = counter + 1;
-		edge.weight.time = catalogue_.getBusWaitTime();
-		edge.weight.span_count = 0;
-		stops_meta_info_[stop.name] = { counter, counter + 1 };
-		size_t id_from = stops_meta_info_[stop.name].first;
-		size_t id_to = stops_meta_info_[stop.name].second;
-
-		Catalogue::DistancesMetaInfo stops_info;
-		stops_info.name = stop.name;
-		stops_info.spans_count = 0;
-		stops_info.type = "Wait";
-		stops_info.weight = catalogue_.getBusWaitTime();
-		stop_distances_meta_info_[{id_from, id_to}] = { stops_info };
-		graph_->AddEdge(edge);
-		counter += 2;
-	}
-
-	for (const auto& bus : catalogue_.GetBusesList())
-	{
-		auto stops = catalogue_.GetBusStops({ bus.begin(), bus.end() });
-		for (size_t i = 0; i < stops.size() - 1; ++i)
-		{
-			for (size_t j = i + 1; j < stops.size(); ++j)
-			{
-				graph::Edge<Catalogue::RoadGraphWeight> edge;
-				edge.from = stops_meta_info_[stops[i]->name].second;
-				edge.to = stops_meta_info_[stops[j]->name].first;
-				double time = 0.0;
-				double speedMetersPerSecond = (catalogue_.GetBusVelocity() * 1000.0) / 3600.0;
-				double distance = 0.0;
-
-				size_t span_count = (j - i);
-
-				for (size_t _i = i; _i < j; ++_i)
-				{
-					distance = catalogue_.GetDistanceBetweenStops(stops[_i], stops[_i + 1]);
-					time += distance / speedMetersPerSecond;
-				}
-				time /= 60.0;
-
-				Catalogue::DistancesMetaInfo bus_route_info;
-				bus_route_info.name = bus;
-				bus_route_info.spans_count = span_count;
-				bus_route_info.type = "Bus";
-				bus_route_info.weight = time;
-				bus_route_info.from = stops[i]->name;
-				bus_route_info.to = stops[j]->name;
-
-				stop_distances_meta_info_[{edge.from, edge.to}] = { bus_route_info };
-
-				edge.weight.time = time;
-				edge.weight.span_count = span_count;
-				graph_->AddEdge(edge);
-			}
-		}
-
-	}
+const std::optional<graph::Router<double>::RouteInfo> Router::FindRoute(const std::string_view stop_from, const std::string_view stop_to) const {
+    return router_->BuildRoute(stop_ids_.at(std::string(stop_from)),stop_ids_.at(std::string(stop_to)));
 }
 
-std::pair<size_t, size_t> TransportRouter::GetStopIdForRouter(const std::string& stop_name) const
-{
-	return stops_meta_info_.at(stop_name);
+const graph::DirectedWeightedGraph<double>& Router::GetGraph() const {
+    return graph_;
 }
 
-Catalogue::DistancesMetaInfo TransportRouter::GetRouteMetaInfo(const std::pair<size_t, size_t> ids) const
-{
-	return stop_distances_meta_info_.at(ids);
+void Router::SetGraph(const graph::DirectedWeightedGraph<double> graph, const std::map<std::string, graph::VertexId> stop_ids) {
+    graph_ = graph;
+    stop_ids_ = stop_ids;
+    router_ = std::make_unique<graph::Router<double>>(graph_);
 }
 
-std::pair<std::string, std::string> TransportRouter::GetStopNamesByMetaIDS(const size_t first, const size_t second) const
-{
-	std::pair<std::string, std::string> names;
-
-	names.first = stop_distances_meta_info_.at({ first, second }).from;
-	names.second = stop_distances_meta_info_.at({ first, second }).to;
-
-	return names;
+const int Router::GetBusWaitTime() const {
+    return bus_wait_time_;
 }
 
-std::optional<graph::Router<Catalogue::RoadGraphWeight>::RouteInfo> TransportRouter::BuildRoute(const size_t from, const size_t to) const
-{
-	return router_->BuildRoute(from, to);
+const double Router::GetBusVelocity() const {
+    return bus_velocity_;
 }
 
-const graph::Edge<Catalogue::RoadGraphWeight>& TransportRouter::GetEdge(const size_t edge_id) const
-{
-	return graph_->GetEdge(edge_id);
+const Router Router::GetRouterSettings() const {
+    return { bus_wait_time_, bus_velocity_ };
 }
 
+const std::map<std::string, graph::VertexId> Router::GetStopIds() const {
+    return stop_ids_;
+}
 
+} // namespace transport

@@ -1,65 +1,31 @@
-#pragma once 
-#include <functional>
-#include <vector>
-#include <string>
+#pragma once
+
 #include "geo.h"
 
+#include <string>
+#include <vector>
+#include <set>
+#include <unordered_map>
 
+namespace transport {
 
-namespace Catalogue
-{
+struct Stop {
+    std::string name;
+    geo::Coordinates coordinates;
+    std::set<std::string> buses_by_stop;
+};
 
-	struct BusStop
-	{
-		std::string name;
-		geo::Coordinates coordinates;
+struct Bus {
+    std::string number;
+    std::vector<const Stop*> stops;
+    bool is_circle;
+};
 
-		bool operator == (const BusStop& other) const;
-	};
+struct BusStat {
+    size_t stops_count;
+    size_t unique_stops_count;
+    double route_length;
+    double curvature;
+};
 
-	struct Bus
-	{
-		std::string name;
-		std::vector<const BusStop*> route;
-
-		bool operator == (const Bus& other) const;
-	};
-
-	struct StopsHasher
-	{
-
-		size_t operator()(const std::pair<const BusStop*, const BusStop*> stops) const;
-
-
-	private:
-		std::hash<const void*> hasher_;
-	};
-
-	namespace Detail
-	{
-		struct BusObject
-		{
-			std::string name;
-			size_t stops;
-			size_t unique_stops;
-			double route_length;
-			double curvature;
-			bool is_ready = false;
-		};
-
-		struct StopObject
-		{
-			std::string name;
-			std::vector<std::string> buses;
-			bool is_ready = false;
-			geo::Coordinates coordinates;
-		};
-
-		struct QueryObject
-		{
-			std::string query_subject;
-			std::string name;
-		};
-	}
-
-}
+} // namespace transport
