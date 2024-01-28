@@ -99,3 +99,5 @@ Map request will return a json document, containing .svg document (printed map)
         "unique_stop_count": 2
     }
 ]
+
+the project consists of two parts (programs)
