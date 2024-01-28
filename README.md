@@ -100,4 +100,4 @@ Map request will return a json document, containing .svg document (printed map)
     }
 ]
 
-the project consists of two parts (programs) that varies on the argv*. 
+the project consists of two parts (programs) that varies on the argv*. there are two options: "make_base" and "stat_requests"
