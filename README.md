@@ -6,6 +6,7 @@ it uses the protobuf to serialize and deserialize the data of the transport cata
 
 Еhe program requires json document on input. Document consists of 2 parts - base_requests and stat_requests. First part is to load data to the database, the second part is a part with different queries.
 base_requests may consist of the queries of 2 types:
+
 1) type is Bus
 {
       "type": "Bus",
